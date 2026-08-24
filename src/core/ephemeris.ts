@@ -35,6 +35,7 @@ import {
   normalize,
   normalizeDegrees,
   perpendicularDistanceToRay,
+  shortestAngularDifference,
 } from './math';
 import type {
   CartesianPosition,
@@ -51,6 +52,7 @@ const MODERN_EPHEMERIS_START_YEAR = -2999;
 const MODERN_EPHEMERIS_END_YEAR = 3000;
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12);
 const SATELLITE_REFERENCE_MS = new Date(satelliteReference.referenceDate).getTime();
+const APPARENT_MOTION_SAMPLE_SECONDS = 60;
 const satelliteReferenceMap = new Map(
   satelliteReference.entries.map((entry) => [entry.key, entry]),
 );
@@ -88,13 +90,42 @@ function galacticPointOnHorizon(
   };
 }
 
+function withApparentMotion(
+  current: HorizontalPosition,
+  future: HorizontalPosition,
+  sampleSeconds = APPARENT_MOTION_SAMPLE_SECONDS,
+): HorizontalPosition {
+  return {
+    ...current,
+    apparentMotion: {
+      altitudeDegreesPerSecond: (future.altitudeDegrees - current.altitudeDegrees) / sampleSeconds,
+      azimuthDegreesPerSecond: shortestAngularDifference(
+        current.azimuthDegrees,
+        future.azimuthDegrees,
+      ) / sampleSeconds,
+    },
+  };
+}
+
 export function getHorizonSnapshot(date: Date, location: ObserverLocation): HorizonSnapshot {
   const observer = new Observer(location.latitude, location.longitude, location.elevationMeters);
-  const sun = horizontalPosition(Body.Sun, date, observer);
-  const moon = horizontalPosition(Body.Moon, date, observer);
+  const futureDate = new Date(date.getTime() + APPARENT_MOTION_SAMPLE_SECONDS * 1_000);
+  const sun = withApparentMotion(
+    horizontalPosition(Body.Sun, date, observer),
+    horizontalPosition(Body.Sun, futureDate, observer),
+  );
+  const moon = withApparentMotion(
+    horizontalPosition(Body.Moon, date, observer),
+    horizontalPosition(Body.Moon, futureDate, observer),
+  );
   const moonPhaseAngle = MoonPhase(date);
-  const milkyWay = Array.from({ length: 49 }, (_, index) =>
-    galacticPointOnHorizon(index * 7.5, date, observer));
+  const milkyWay = Array.from({ length: 49 }, (_, index) => {
+    const longitude = index * 7.5;
+    return withApparentMotion(
+      galacticPointOnHorizon(longitude, date, observer),
+      galacticPointOnHorizon(longitude, futureDate, observer),
+    );
+  });
 
   return {
     date,
@@ -110,7 +141,7 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
   };
 }
 
-export function getLunarHorizonSnapshot(date: Date): LunarHorizonSnapshot {
+function lunarEarthPosition(date: Date): LunarHorizonSnapshot['earth'] {
   const libration = Libration(date);
   const siteLatitude = degreesToRadians(APOLLO_11_SITE.latitude);
   const siteLongitude = degreesToRadians(APOLLO_11_SITE.longitude);
@@ -127,16 +158,30 @@ export function getLunarHorizonSnapshot(date: Date): LunarHorizonSnapshot {
   const east = Math.sin(deltaLongitude) * Math.cos(earthLatitude);
   const north = Math.cos(siteLatitude) * Math.sin(earthLatitude) -
     Math.sin(siteLatitude) * Math.cos(earthLatitude) * Math.cos(deltaLongitude);
+  const earthPhaseAngle = normalizeDegrees(MoonPhase(date) + 180);
+
+  return {
+    altitudeDegrees: altitude,
+    azimuthDegrees: normalizeDegrees(Math.atan2(east, north) * 180 / Math.PI),
+    distanceKm: libration.dist_km,
+    angularDiameterDegrees: 2 * Math.atan(6_378.137 / libration.dist_km) * 180 / Math.PI,
+    phaseAngleDegrees: earthPhaseAngle,
+    illuminatedFraction: (1 - Math.cos(degreesToRadians(earthPhaseAngle))) / 2,
+  };
+}
+
+export function getLunarHorizonSnapshot(date: Date): LunarHorizonSnapshot {
+  const futureDate = new Date(date.getTime() + APPARENT_MOTION_SAMPLE_SECONDS * 1_000);
+  const earth = lunarEarthPosition(date);
+  const futureEarth = lunarEarthPosition(futureDate);
 
   return {
     date,
     siteLatitudeDegrees: APOLLO_11_SITE.latitude,
     siteLongitudeDegrees: APOLLO_11_SITE.longitude,
     earth: {
-      altitudeDegrees: altitude,
-      azimuthDegrees: normalizeDegrees(Math.atan2(east, north) * 180 / Math.PI),
-      distanceKm: libration.dist_km,
-      angularDiameterDegrees: 2 * Math.atan(6_378.137 / libration.dist_km) * 180 / Math.PI,
+      ...earth,
+      apparentMotion: withApparentMotion(earth, futureEarth).apparentMotion,
     },
   };
 }
@@ -163,6 +208,8 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
     phaseAngleDegrees: illumination.phase_angle,
     ringTiltDegrees: illumination.ring_tilt,
     primeMeridianDegrees: axis.spin,
+    rotationPeriodHours: planet.rotationPeriodHours,
+    orbit: planet.orbit,
   };
 }
 

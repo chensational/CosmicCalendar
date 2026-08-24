@@ -217,6 +217,7 @@ export function CosmicCalendar({
             solar={solar}
             scalePosition={scalePosition}
             cosmicAgeYears={cosmicAgeYears}
+            live={live}
             reducedMotion={reducedMotion}
             onWheel={changeScaleOrTime}
           />

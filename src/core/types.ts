@@ -10,6 +10,10 @@ export interface HorizontalPosition {
   altitudeDegrees: number;
   azimuthDegrees: number;
   distanceKm?: number;
+  apparentMotion?: {
+    altitudeDegreesPerSecond: number;
+    azimuthDegreesPerSecond: number;
+  };
 }
 
 export interface HorizonSnapshot {
@@ -30,6 +34,8 @@ export interface LunarHorizonSnapshot {
   siteLongitudeDegrees: number;
   earth: HorizontalPosition & {
     angularDiameterDegrees: number;
+    phaseAngleDegrees: number;
+    illuminatedFraction: number;
   };
 }
 
@@ -37,6 +43,14 @@ export interface CartesianPosition {
   x: number;
   y: number;
   z: number;
+}
+
+export interface OrbitalElements {
+  semiMajorAxisAu: number;
+  eccentricity: number;
+  inclinationDegrees: number;
+  longitudePerihelionDegrees: number;
+  ascendingNodeDegrees: number;
 }
 
 export interface PlanetState {
@@ -52,6 +66,8 @@ export interface PlanetState {
   phaseAngleDegrees: number;
   ringTiltDegrees?: number;
   primeMeridianDegrees: number;
+  rotationPeriodHours: number;
+  orbit: OrbitalElements;
 }
 
 export interface SatelliteState {

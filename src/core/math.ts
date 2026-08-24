@@ -7,6 +7,34 @@ export function normalizeDegrees(value: number): number {
   return ((value % 360) + 360) % 360;
 }
 
+export function shortestAngularDifference(fromDegrees: number, toDegrees: number): number {
+  return ((toDegrees - fromDegrees + 540) % 360) - 180;
+}
+
+export function smoothstep(minimum: number, maximum: number, value: number): number {
+  const progress = clamp((value - minimum) / (maximum - minimum), 0, 1);
+  return progress * progress * (3 - 2 * progress);
+}
+
+/** Initial great-circle bearing, clockwise from increasing latitude. */
+export function greatCircleBearingRadians(
+  fromLongitudeDegrees: number,
+  fromLatitudeDegrees: number,
+  toLongitudeDegrees: number,
+  toLatitudeDegrees: number,
+): number {
+  const fromLatitude = degreesToRadians(fromLatitudeDegrees);
+  const toLatitude = degreesToRadians(toLatitudeDegrees);
+  const deltaLongitude = degreesToRadians(
+    shortestAngularDifference(fromLongitudeDegrees, toLongitudeDegrees),
+  );
+  return Math.atan2(
+    Math.sin(deltaLongitude) * Math.cos(toLatitude),
+    Math.cos(fromLatitude) * Math.sin(toLatitude) -
+      Math.sin(fromLatitude) * Math.cos(toLatitude) * Math.cos(deltaLongitude),
+  );
+}
+
 export function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }

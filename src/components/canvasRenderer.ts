@@ -4,8 +4,11 @@ import {
   SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC,
   SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS,
 } from '../core/constants';
-import { clamp, hashUnit } from '../core/math';
+import { clamp, greatCircleBearingRadians, hashUnit, normalizeDegrees, smoothstep } from '../core/math';
+import { eclipticSphericalToCartesian, orbitalPositionAtTrueAnomaly } from '../core/orbits';
 import type {
+  CartesianPosition,
+  HorizontalPosition,
   HorizonSnapshot,
   LunarHorizonSnapshot,
   SolarSystemSnapshot,
@@ -17,6 +20,7 @@ export interface CanvasFrame {
   height: number;
   scalePosition: number;
   elapsedSeconds: number;
+  realtimeOffsetSeconds: number;
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
@@ -25,6 +29,34 @@ export interface CanvasFrame {
 }
 
 const TAU = Math.PI * 2;
+const STAR_FIELD = Array.from({ length: 170 }, (_, index) => ({
+  index,
+  x: hashUnit(`star-x-${index}`),
+  y: hashUnit(`star-y-${index}`),
+  radius: 0.35 + hashUnit(`star-r-${index}`) * 1.25,
+  luminosity: 0.28 + hashUnit(`star-l-${index}`) * 0.54,
+  phase: hashUnit(`star-phase-${index}`) * TAU,
+  scintillationRate: 0.8 + hashUnit(`star-p-${index}`) * 2.2,
+}));
+const starPathCache = new Map<string, readonly Path2D[]>();
+
+function starPaths(width: number, height: number) {
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}`;
+  const cached = starPathCache.get(cacheKey);
+  if (cached) return cached;
+  const paths = Array.from({ length: 4 }, () => new Path2D());
+  for (const star of STAR_FIELD) {
+    const bucket = clamp(Math.floor((star.luminosity - 0.28) / 0.54 * 4), 0, 3);
+    paths[bucket].moveTo(star.x * width + star.radius, star.y * height);
+    paths[bucket].arc(star.x * width, star.y * height, star.radius, 0, TAU);
+  }
+  starPathCache.set(cacheKey, paths);
+  if (starPathCache.size > 6) {
+    const oldest = starPathCache.keys().next().value;
+    if (oldest) starPathCache.delete(oldest);
+  }
+  return paths;
+}
 
 function roundedRect(
   context: CanvasRenderingContext2D,
@@ -38,17 +70,28 @@ function roundedRect(
   context.roundRect(x, y, width, height, radius);
 }
 
-function drawStars(context: CanvasRenderingContext2D, width: number, height: number, elapsed: number) {
+function drawStars(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  elapsed: number,
+  scintillation = 0,
+) {
   context.save();
-  for (let index = 0; index < 170; index += 1) {
-    const x = hashUnit(`star-x-${index}`) * width;
-    const y = hashUnit(`star-y-${index}`) * height;
-    const radius = 0.35 + hashUnit(`star-r-${index}`) * 1.25;
-    const pulse = 0.42 + 0.35 * Math.sin(elapsed * (0.2 + hashUnit(`star-p-${index}`)) + index);
-    context.fillStyle = `rgba(229, 237, 255, ${clamp(pulse, 0.12, 0.82)})`;
-    context.beginPath();
-    context.arc(x, y, radius, 0, TAU);
-    context.fill();
+  starPaths(width, height).forEach((path, bucket) => {
+    context.fillStyle = `rgba(229, 237, 255, ${0.34 + bucket * 0.14})`;
+    context.fill(path);
+  });
+  if (scintillation) {
+    for (const star of STAR_FIELD) {
+      if (star.index % 7) continue;
+      const pulse = scintillation * Math.sin(elapsed * star.scintillationRate + star.phase);
+      if (pulse <= 0) continue;
+      context.fillStyle = `rgba(245, 249, 255, ${pulse})`;
+      context.beginPath();
+      context.arc(star.x * width, star.y * height, star.radius * 1.08, 0, TAU);
+      context.fill();
+    }
   }
   context.restore();
 }
@@ -80,26 +123,57 @@ function drawPhaseDisc(
   y: number,
   radius: number,
   color: string,
-  illuminatedFraction: number,
+  phaseAngleDegrees: number,
   rotation = 0,
 ) {
+  const phase = normalizeDegrees(phaseAngleDegrees) / 360;
+  const waxing = phase <= 0.5;
+  const terminator = Math.cos(phase * TAU) * (waxing ? 1 : -1);
   context.save();
   context.translate(x, y);
   context.rotate(rotation);
   context.beginPath();
   context.arc(0, 0, radius, 0, TAU);
   context.clip();
-  const gradient = context.createRadialGradient(-radius * 0.35, -radius * 0.3, radius * 0.08, 0, 0, radius);
-  gradient.addColorStop(0, '#fff');
-  gradient.addColorStop(0.32, color);
-  gradient.addColorStop(1, '#17213b');
-  context.fillStyle = gradient;
+
+  const darkFace = context.createRadialGradient(-radius * 0.2, -radius * 0.22, 0, 0, 0, radius);
+  darkFace.addColorStop(0, '#263044');
+  darkFace.addColorStop(1, '#050812');
+  context.fillStyle = darkFace;
   context.fillRect(-radius, -radius, radius * 2, radius * 2);
-  const terminator = (illuminatedFraction * 2 - 1) * radius;
-  context.fillStyle = 'rgba(1, 4, 14, 0.88)';
+
   context.beginPath();
-  context.ellipse(terminator, 0, radius, radius * 1.04, 0, 0, TAU);
+  const segments = 28;
+  for (let step = 0; step <= segments; step += 1) {
+    const angle = -Math.PI / 2 + step / segments * Math.PI;
+    const limbX = (waxing ? 1 : -1) * Math.cos(angle) * radius;
+    const limbY = Math.sin(angle) * radius;
+    if (step === 0) context.moveTo(limbX, limbY); else context.lineTo(limbX, limbY);
+  }
+  for (let step = segments; step >= 0; step -= 1) {
+    const angle = -Math.PI / 2 + step / segments * Math.PI;
+    context.lineTo(terminator * Math.cos(angle) * radius, Math.sin(angle) * radius);
+  }
+  context.closePath();
+  const lightFace = context.createRadialGradient(
+    (waxing ? 0.28 : -0.28) * radius,
+    -radius * 0.28,
+    radius * 0.05,
+    0,
+    0,
+    radius,
+  );
+  lightFace.addColorStop(0, '#fff');
+  lightFace.addColorStop(0.34, color);
+  lightFace.addColorStop(1, '#758096');
+  context.fillStyle = lightFace;
   context.fill();
+
+  const limbShade = context.createRadialGradient(0, 0, radius * 0.58, 0, 0, radius);
+  limbShade.addColorStop(0, 'rgba(0,0,0,0)');
+  limbShade.addColorStop(1, 'rgba(0,0,0,.34)');
+  context.fillStyle = limbShade;
+  context.fillRect(-radius, -radius, radius * 2, radius * 2);
   context.restore();
   context.save();
   context.strokeStyle = 'rgba(255,255,255,.28)';
@@ -110,42 +184,68 @@ function drawPhaseDisc(
   context.restore();
 }
 
-function skyPoint(width: number, height: number, altitude: number, azimuth: number) {
+function apparentPosition(position: HorizontalPosition, elapsedSeconds: number): HorizontalPosition {
+  const motion = position.apparentMotion;
+  if (!motion || !elapsedSeconds) return position;
+  return {
+    ...position,
+    altitudeDegrees: position.altitudeDegrees + motion.altitudeDegreesPerSecond * elapsedSeconds,
+    azimuthDegrees: normalizeDegrees(
+      position.azimuthDegrees + motion.azimuthDegreesPerSecond * elapsedSeconds,
+    ),
+  };
+}
+
+function skyPoint(width: number, height: number, position: HorizontalPosition) {
   const horizonY = height * 0.72;
   return {
-    x: (azimuth / 360) * width,
-    y: horizonY - altitude / 90 * height * 0.62,
+    x: (position.azimuthDegrees / 360) * width,
+    y: horizonY - position.altitudeDegrees / 90 * height * 0.62,
   };
 }
 
 function drawHorizonScene(frame: CanvasFrame) {
-  const { context, width, height, horizon, lunar, elapsedSeconds, cosmicAgeYears } = frame;
+  const { context, width, height, horizon, lunar, elapsedSeconds, realtimeOffsetSeconds, cosmicAgeYears } = frame;
   const earthFormationAge = 13.8e9 - 4.54e9;
   const redGiantProgress = clamp((cosmicAgeYears - (13.8e9 + 4.5e9)) / 8e8, 0, 1);
   const postEarthProgress = clamp((cosmicAgeYears - (13.8e9 + 7.5e9)) / 1e9, 0, 1);
-  const sunHeight = horizon.sun.altitudeDegrees;
-  const daylight = clamp((sunHeight + 18) / 24, 0, 1);
+  const animatedSun = apparentPosition(horizon.sun, realtimeOffsetSeconds);
+  const animatedMoon = apparentPosition(horizon.moon, realtimeOffsetSeconds);
+  const animatedMilkyWay = horizon.milkyWay.map((position) =>
+    apparentPosition(position, realtimeOffsetSeconds));
+  const animatedCore = animatedMilkyWay[0];
+  const sunHeight = animatedSun.altitudeDegrees;
+  const daylight = smoothstep(-8, 12, sunHeight);
+  const twilight = smoothstep(-18, -2, sunHeight) * (1 - smoothstep(-2, 12, sunHeight));
   const sky = context.createLinearGradient(0, 0, 0, height);
-  sky.addColorStop(0, daylight > 0.2 ? '#183d67' : '#020512');
-  sky.addColorStop(0.7, daylight > 0.15 ? '#b56b58' : '#11162c');
+  sky.addColorStop(0, '#01040d');
+  sky.addColorStop(0.72, '#0b1024');
   sky.addColorStop(1, '#080917');
   context.fillStyle = sky;
   context.fillRect(0, 0, width, height);
+  const daylightSky = context.createLinearGradient(0, 0, 0, height);
+  daylightSky.addColorStop(0, `rgba(34, 91, 151, ${daylight})`);
+  daylightSky.addColorStop(0.68, `rgba(117, 151, 188, ${daylight * 0.9})`);
+  daylightSky.addColorStop(1, `rgba(198, 173, 146, ${daylight * 0.55})`);
+  context.fillStyle = daylightSky;
+  context.fillRect(0, 0, width, height);
+  const twilightSky = context.createLinearGradient(0, height * 0.2, 0, height * 0.75);
+  twilightSky.addColorStop(0, 'rgba(47, 64, 111, 0)');
+  twilightSky.addColorStop(1, `rgba(199, 91, 61, ${twilight * 0.82})`);
+  context.fillStyle = twilightSky;
+  context.fillRect(0, 0, width, height * 0.76);
   context.save();
-  context.globalAlpha = 1 - daylight * 0.82;
-  drawStars(context, width, height * 0.74, elapsedSeconds);
+  context.globalAlpha = 1 - smoothstep(-16, -2, sunHeight);
+  drawStars(context, width, height * 0.74, elapsedSeconds, frame.reducedMotion ? 0 : 0.12);
   context.restore();
 
   context.save();
-  context.strokeStyle = 'rgba(169, 194, 230, .32)';
   context.lineWidth = Math.max(7, height * 0.018);
-  context.shadowColor = 'rgba(125, 155, 215, .55)';
-  context.shadowBlur = 22;
   context.beginPath();
   let started = false;
   let previousX = 0;
-  horizon.milkyWay.forEach((point) => {
-    const projected = skyPoint(width, height, point.altitudeDegrees, point.azimuthDegrees);
+  animatedMilkyWay.forEach((point) => {
+    const projected = skyPoint(width, height, point);
     if (!started || Math.abs(projected.x - previousX) > width * 0.3) {
       context.moveTo(projected.x, projected.y);
       started = true;
@@ -154,21 +254,44 @@ function drawHorizonScene(frame: CanvasFrame) {
     }
     previousX = projected.x;
   });
+  // Two translucent strokes approximate the diffuse Galactic band without a
+  // full-canvas shadow blur on every atmospheric animation frame.
+  const bandWidth = context.lineWidth;
+  context.strokeStyle = 'rgba(104, 132, 190, .13)';
+  context.lineWidth = bandWidth * 2.35;
+  context.stroke();
+  context.strokeStyle = 'rgba(169, 194, 230, .32)';
+  context.lineWidth = bandWidth;
   context.stroke();
   context.restore();
 
-  const sun = skyPoint(width, height, horizon.sun.altitudeDegrees, horizon.sun.azimuthDegrees);
+  const sun = skyPoint(width, height, animatedSun);
   drawGlow(context, sun.x, sun.y, 18, 'rgba(255, 205, 112, .76)', daylight);
   context.fillStyle = redGiantProgress > 0.05 ? '#df6a42' : '#ffd986';
   context.beginPath();
   context.arc(sun.x, sun.y, 7 + daylight * 4 + redGiantProgress * Math.min(width, height) * 0.055, 0, TAU);
   context.fill();
 
-  const moon = skyPoint(width, height, horizon.moon.altitudeDegrees, horizon.moon.azimuthDegrees);
+  const moon = skyPoint(width, height, animatedMoon);
   drawGlow(context, moon.x, moon.y, 11, 'rgba(182, 208, 255, .38)', 1);
-  drawPhaseDisc(context, moon.x, moon.y, 9, '#dce4eb', horizon.moon.illuminatedFraction, 0.2);
+  const sunBearingFromMoon = greatCircleBearingRadians(
+    animatedMoon.azimuthDegrees,
+    animatedMoon.altitudeDegrees,
+    animatedSun.azimuthDegrees,
+    animatedSun.altitudeDegrees,
+  );
+  const canonicalBrightSide = horizon.moon.phaseAngleDegrees <= 180 ? 0 : Math.PI;
+  drawPhaseDisc(
+    context,
+    moon.x,
+    moon.y,
+    9,
+    '#dce4eb',
+    horizon.moon.phaseAngleDegrees,
+    sunBearingFromMoon - Math.PI / 2 - canonicalBrightSide,
+  );
 
-  const core = skyPoint(width, height, horizon.galacticCenter.altitudeDegrees, horizon.galacticCenter.azimuthDegrees);
+  const core = skyPoint(width, height, animatedCore);
   context.fillStyle = '#ddb97a';
   context.beginPath();
   context.arc(core.x, core.y, 3, 0, TAU);
@@ -225,14 +348,66 @@ function drawHorizonScene(frame: CanvasFrame) {
   context.moveTo(insetX + 10, lunarHorizonY);
   context.lineTo(insetX + lunarInsetWidth - 10, lunarHorizonY);
   context.stroke();
-  const earthX = insetX + 16 + lunar.earth.azimuthDegrees / 360 * (lunarInsetWidth - 32);
-  const earthY = lunarHorizonY - lunar.earth.altitudeDegrees / 90 * 47;
+  const animatedEarth = apparentPosition(lunar.earth, realtimeOffsetSeconds);
+  const earthX = insetX + 16 + animatedEarth.azimuthDegrees / 360 * (lunarInsetWidth - 32);
+  const earthY = lunarHorizonY - animatedEarth.altitudeDegrees / 90 * 47;
   drawGlow(context, earthX, earthY, 9, 'rgba(82, 151, 238, .4)');
-  drawPhaseDisc(context, earthX, earthY, 8, '#4b91ca', 0.72, -0.2);
+  drawPhaseDisc(context, earthX, earthY, 8, '#4b91ca', lunar.earth.phaseAngleDegrees, -0.2);
 }
 
 function planetRadius(radiusKm: number): number {
   return clamp(2.4 + Math.log10(radiusKm / 700 + 1) * 3.8, 2.6, 14);
+}
+
+function projectSolarVector(
+  vector: CartesianPosition,
+  centerX: number,
+  centerY: number,
+  orbitScale: (distanceAu: number) => number,
+) {
+  const distance = Math.hypot(vector.x, vector.y, vector.z) || 1;
+  const radius = orbitScale(distance);
+  const cameraRotation = -0.12;
+  const rotatedX = vector.x * Math.cos(cameraRotation) - vector.y * Math.sin(cameraRotation);
+  const rotatedY = vector.x * Math.sin(cameraRotation) + vector.y * Math.cos(cameraRotation);
+  return {
+    x: centerX + rotatedX / distance * radius,
+    y: centerY + (rotatedY * 0.48 - vector.z * 0.72) / distance * radius,
+  };
+}
+
+const orbitPathCache = new Map<string, ReadonlyMap<string, Path2D>>();
+
+function solarOrbitPaths(
+  planets: SolarSystemSnapshot['planets'],
+  width: number,
+  height: number,
+  centerX: number,
+  centerY: number,
+  orbitScale: (distanceAu: number) => number,
+) {
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}`;
+  const cached = orbitPathCache.get(cacheKey);
+  if (cached) return cached;
+
+  const paths = new Map<string, Path2D>();
+  for (const planet of planets) {
+    const path = new Path2D();
+    for (let step = 0; step <= 112; step += 1) {
+      const point = orbitalPositionAtTrueAnomaly(planet.orbit, step / 112 * TAU);
+      const projected = projectSolarVector(point, centerX, centerY, orbitScale);
+      if (step === 0) path.moveTo(projected.x, projected.y);
+      else path.lineTo(projected.x, projected.y);
+    }
+    path.closePath();
+    paths.set(planet.key, path);
+  }
+  orbitPathCache.set(cacheKey, paths);
+  if (orbitPathCache.size > 4) {
+    const oldest = orbitPathCache.keys().next().value;
+    if (oldest) orbitPathCache.delete(oldest);
+  }
+  return paths;
 }
 
 function drawWrappedSpot(
@@ -356,7 +531,7 @@ function drawPlanetSurface(
 }
 
 function drawSolarScene(frame: CanvasFrame) {
-  const { context, width, height, solar, elapsedSeconds } = frame;
+  const { context, width, height, solar, elapsedSeconds, realtimeOffsetSeconds } = frame;
   const background = context.createRadialGradient(width * 0.5, height * 0.5, 0, width * 0.5, height * 0.5, width * 0.65);
   background.addColorStop(0, '#171225');
   background.addColorStop(1, '#02040c');
@@ -367,19 +542,17 @@ function drawSolarScene(frame: CanvasFrame) {
   const centerY = height * 0.49;
   const maxOrbit = Math.min(width, height) * 0.43;
   const orbitScale = (distanceAu: number) => 35 + Math.log1p(distanceAu) / Math.log(41) * (maxOrbit - 35);
+  const orbitPaths = solarOrbitPaths(solar.planets, width, height, centerX, centerY, orbitScale);
 
   const planetScreen = new Map<string, { x: number; y: number; radius: number }>();
   solar.planets.forEach((planet) => {
-    const orbit = orbitScale(planet.distanceAu);
     context.strokeStyle = planet.key === 'mercury' ? 'rgba(230, 193, 143, .34)' : 'rgba(184, 200, 229, .12)';
     context.lineWidth = planet.key === 'mercury' ? 1.2 : 0.8;
-    context.beginPath();
-    context.ellipse(centerX, centerY, orbit, orbit * 0.48, -0.12, 0, TAU);
-    context.stroke();
+    const path = orbitPaths.get(planet.key);
+    if (path) context.stroke(path);
   });
 
-  const sunPulse = frame.reducedMotion ? 0 : Math.sin(elapsedSeconds * 0.7) * 1.4;
-  drawGlow(context, centerX, centerY, 24 + sunPulse, 'rgba(255, 184, 73, .75)');
+  drawGlow(context, centerX, centerY, 24, 'rgba(255, 184, 73, .75)');
   const sunGradient = context.createRadialGradient(centerX - 7, centerY - 9, 2, centerX, centerY, 23);
   sunGradient.addColorStop(0, '#fff5be');
   sunGradient.addColorStop(0.5, '#ffc04a');
@@ -390,19 +563,25 @@ function drawSolarScene(frame: CanvasFrame) {
   context.fill();
 
   solar.planets.forEach((planet) => {
-    const angle = planet.eclipticLongitudeDegrees * Math.PI / 180 - 0.12;
-    const orbit = orbitScale(planet.distanceAu);
-    const x = centerX + Math.cos(angle) * orbit;
-    const y = centerY + Math.sin(angle) * orbit * 0.48;
+    const eclipticPosition = eclipticSphericalToCartesian(
+      planet.distanceAu,
+      planet.eclipticLongitudeDegrees,
+      planet.eclipticLatitudeDegrees,
+    );
+    const projected = projectSolarVector(eclipticPosition, centerX, centerY, orbitScale);
+    const { x, y } = projected;
     const radius = planetRadius(planet.radiusKm);
     if (planet.name === 'Saturn') {
       context.strokeStyle = 'rgba(227, 213, 165, .7)';
       context.lineWidth = Math.max(1, radius * 0.25);
       context.beginPath();
-      context.ellipse(x, y, radius * 1.8, radius * 0.5, -0.18, 0, TAU);
+      const ringOpening = clamp(Math.abs(planet.ringTiltDegrees ?? 12) / 28, 0.18, 0.72);
+      context.ellipse(x, y, radius * 1.8, radius * ringOpening, -0.18, 0, TAU);
       context.stroke();
     }
-    drawPlanetSurface(context, x, y, radius, planet.color, planet.name, planet.primeMeridianDegrees, Math.atan2(centerY - y, centerX - x));
+    const physicalSpin = planet.primeMeridianDegrees +
+      realtimeOffsetSeconds * 360 / (planet.rotationPeriodHours * 3_600);
+    drawPlanetSurface(context, x, y, radius, planet.color, planet.name, physicalSpin, Math.atan2(centerY - y, centerX - x));
     planetScreen.set(planet.key, { x, y, radius });
     context.fillStyle = 'rgba(231, 237, 249, .82)';
     context.font = '500 9px ui-monospace, SFMono-Regular, Menlo, monospace';
@@ -412,10 +591,16 @@ function drawSolarScene(frame: CanvasFrame) {
   solar.satellites.forEach((satellite) => {
     const parent = planetScreen.get(satellite.parent);
     if (!parent) return;
-    const vectorLength = Math.hypot(satellite.relativePositionKm.x, satellite.relativePositionKm.y) || 1;
+    const vectorLength = Math.hypot(
+      satellite.relativePositionKm.x,
+      satellite.relativePositionKm.y,
+      satellite.relativePositionKm.z,
+    ) || 1;
     const localRadius = parent.radius + 4 + Math.log10(satellite.semiMajorAxisKm / 8_000 + 1) * 2.6;
     const satelliteX = parent.x + satellite.relativePositionKm.x / vectorLength * localRadius;
-    const satelliteY = parent.y + satellite.relativePositionKm.y / vectorLength * localRadius * 0.58;
+    const satelliteY = parent.y + (
+      satellite.relativePositionKm.y * 0.58 - satellite.relativePositionKm.z * 0.4
+    ) / vectorLength * localRadius;
     const dotRadius = clamp(0.85 + Math.log10(satellite.radiusKm / 5 + 1) * 0.32, 0.9, 2.1);
     context.fillStyle = satellite.sunlit ? '#dde8f5' : '#263044';
     context.beginPath();
@@ -500,9 +685,10 @@ function drawGalaxyScene(frame: CanvasFrame) {
     if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
   }
   context.stroke();
-  const liveAngle = frame.reducedMotion ? 0 : elapsedSeconds * 0.012;
-  const sunX = Math.cos(liveAngle) * sunOrbitRadius;
-  const sunY = Math.sin(liveAngle) * sunOrbitRadius * 0.46;
+  // A 224 Myr Galactic orbit has no honest browser-visible real-time motion.
+  // Keep the present marker at the modeled trail endpoint instead of inventing it.
+  const sunX = sunOrbitRadius;
+  const sunY = -SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC / 200 * radius * 0.018;
   drawGlow(context, sunX, sunY, 7, 'rgba(255, 209, 103, .72)');
   context.fillStyle = '#ffe1a0';
   context.beginPath();
@@ -510,14 +696,15 @@ function drawGalaxyScene(frame: CanvasFrame) {
   context.fill();
   context.restore();
 
-  roundedRect(context, 18, 18, Math.min(358, width - 36), 62, 12);
+  const infoY = height - 130;
+  roundedRect(context, 18, infoY, Math.min(358, width - 36), 62, 12);
   context.fillStyle = 'rgba(4, 7, 18, .72)';
   context.fill();
   context.fillStyle = '#b5c5da';
   context.font = '500 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-  context.fillText(`SUN · ${GALACTIC_CENTER_DISTANCE_KPC.toFixed(3)} KPC FROM SAGITTARIUS A*`, 30, 42);
-  context.fillText(`Z ≈ +${SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC.toFixed(1)} PC · VERTICAL MODEL ≈ ${SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS} MYR`, 30, 59);
-  context.fillText(`TRAIL · ≈ ${loops.toFixed(1)} GALACTIC ORBITS SINCE SOLAR BIRTH`, 30, 75);
+  context.fillText(`SUN · ${GALACTIC_CENTER_DISTANCE_KPC.toFixed(3)} KPC FROM SAGITTARIUS A*`, 30, infoY + 24);
+  context.fillText(`Z ≈ +${SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC.toFixed(1)} PC · VERTICAL MODEL ≈ ${SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS} MYR`, 30, infoY + 41);
+  context.fillText(`TRAIL · ≈ ${loops.toFixed(1)} GALACTIC ORBITS SINCE SOLAR BIRTH`, 30, infoY + 57);
 }
 
 function drawUniverseScene(frame: CanvasFrame) {
@@ -534,11 +721,10 @@ function drawUniverseScene(frame: CanvasFrame) {
   drawStars(context, width, height, elapsedSeconds);
 
   for (let ring = 1; ring <= 7; ring += 1) {
-    const pulse = frame.reducedMotion ? 0 : Math.sin(elapsedSeconds * 0.15 + ring) * 3;
     context.strokeStyle = `rgba(132, 157, 218, ${0.19 - ring * 0.015})`;
     context.lineWidth = 1;
     context.beginPath();
-    context.ellipse(centerX, centerY, maxRadius * ring / 7 + pulse, maxRadius * 0.52 * ring / 7 + pulse * 0.4, -0.15, 0, TAU);
+    context.ellipse(centerX, centerY, maxRadius * ring / 7, maxRadius * 0.52 * ring / 7, -0.15, 0, TAU);
     context.stroke();
   }
 

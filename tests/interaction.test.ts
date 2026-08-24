@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { wheelDeltaToScaleStep } from '../src/core/interaction';
+import { adaptiveCanvasPixelRatio, dampedValue, wheelDeltaToScaleStep } from '../src/core/interaction';
 
 describe('wheel scale interaction', () => {
   it('keeps precise trackpad movement proportional', () => {
@@ -19,5 +19,25 @@ describe('wheel scale interaction', () => {
 
   it('ignores invalid input', () => {
     expect(wheelDeltaToScaleStep(Number.NaN)).toBe(0);
+  });
+});
+
+describe('animation performance controls', () => {
+  it('keeps spring timing independent of display refresh rate', () => {
+    const simulate = (framesPerSecond: number) => {
+      let value = 0;
+      for (let frame = 0; frame < framesPerSecond; frame += 1) {
+        value = dampedValue(value, 1, 1 / framesPerSecond);
+      }
+      return value;
+    };
+    expect(simulate(24)).toBeCloseTo(simulate(120), 10);
+  });
+
+  it('bounds Retina backing resolution by pixel budget', () => {
+    const ratio = adaptiveCanvasPixelRatio(1_177, 610, 2);
+    expect(ratio).toBeGreaterThan(1);
+    expect(1_177 * ratio * 610 * ratio).toBeCloseTo(1_250_000, 4);
+    expect(adaptiveCanvasPixelRatio(400, 540, 3)).toBe(2);
   });
 });

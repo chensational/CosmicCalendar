@@ -9,6 +9,7 @@ import {
   getSolarSystemSnapshot,
   satelliteDistanceFromParent,
 } from '../src/core/ephemeris';
+import { shortestAngularDifference } from '../src/core/math';
 
 describe('Earth-local ephemeris', () => {
   it('agrees with a committed JPL Horizons DE441 Sun fixture', () => {
@@ -19,6 +20,18 @@ describe('Earth-local ephemeris', () => {
     // Astronomy Engine's normal atmospheric refraction is intentionally enabled.
     expect(snapshot.sun.altitudeDegrees).toBeCloseTo(7.895707, 0);
     expect(snapshot.milkyWay).toHaveLength(49);
+    expect(snapshot.sun.apparentMotion?.azimuthDegreesPerSecond).toBeTypeOf('number');
+  });
+
+  it('predicts smooth apparent motion between five-second ephemeris refreshes', () => {
+    const date = new Date('2026-08-23T00:00:00Z');
+    const current = getHorizonSnapshot(date, DEFAULT_LOCATION);
+    const tenSecondsLater = getHorizonSnapshot(new Date(date.getTime() + 10_000), DEFAULT_LOCATION);
+    const motion = current.sun.apparentMotion!;
+    const predictedAltitude = current.sun.altitudeDegrees + motion.altitudeDegreesPerSecond * 10;
+    const predictedAzimuth = current.sun.azimuthDegrees + motion.azimuthDegreesPerSecond * 10;
+    expect(predictedAltitude).toBeCloseTo(tenSecondsLater.sun.altitudeDegrees, 4);
+    expect(shortestAngularDifference(predictedAzimuth, tenSecondsLater.sun.azimuthDegrees)).toBeCloseTo(0, 4);
   });
 
   it('places Earth above the Apollo 11 horizon on the near side', () => {
@@ -28,6 +41,8 @@ describe('Earth-local ephemeris', () => {
     expect(snapshot.earth.distanceKm).toBeGreaterThan(350_000);
     expect(snapshot.earth.distanceKm).toBeLessThan(410_000);
     expect(snapshot.earth.angularDiameterDegrees).toBeGreaterThan(1.7);
+    const terrestrial = getHorizonSnapshot(new Date('2026-08-23T00:00:00Z'), DEFAULT_LOCATION);
+    expect(snapshot.earth.illuminatedFraction + terrestrial.moon.illuminatedFraction).toBeCloseTo(1, 10);
   });
 });
 
@@ -44,6 +59,8 @@ describe('solar-system model', () => {
     expect(snapshot.satellites.filter((satellite) => satellite.model === 'jpl-reference-kepler')).toHaveLength(15);
     expect(snapshot.planets.find((planet) => planet.key === 'earth')?.distanceAu).toBeCloseTo(1, 1);
     expect(snapshot.planets.find((planet) => planet.key === 'neptune')?.distanceAu).toBeGreaterThan(29);
+    expect(snapshot.planets.every((planet) => Number.isFinite(planet.rotationPeriodHours))).toBe(true);
+    expect(snapshot.planets.find((planet) => planet.key === 'mercury')?.orbit.eccentricity).toBeGreaterThan(0.2);
   });
 
   it('preserves satellite orbital scales', () => {

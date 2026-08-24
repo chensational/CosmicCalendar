@@ -20,3 +20,23 @@ export function wheelDeltaToScaleStep(
 
   return clamp(pixelDelta * WHEEL_SENSITIVITY, -MAX_SCALE_STEP, MAX_SCALE_STEP);
 }
+
+export function dampedValue(
+  current: number,
+  target: number,
+  deltaSeconds: number,
+  response = 7,
+): number {
+  const boundedDelta = clamp(deltaSeconds, 0, 0.1);
+  return current + (target - current) * (1 - Math.exp(-response * boundedDelta));
+}
+
+export function adaptiveCanvasPixelRatio(
+  width: number,
+  height: number,
+  devicePixelRatio: number,
+  pixelBudget = 1_250_000,
+): number {
+  const pixelBudgetRatio = Math.sqrt(pixelBudget / Math.max(1, width * height));
+  return Math.max(0.75, Math.min(devicePixelRatio || 1, 2, pixelBudgetRatio));
+}

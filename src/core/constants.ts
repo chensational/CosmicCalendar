@@ -35,15 +35,51 @@ export const DEFAULT_LOCATION = Object.freeze({
 });
 
 export const PLANETS = Object.freeze([
-  { body: Body.Mercury, key: 'mercury', name: 'Mercury', color: '#b6aa9d', radiusKm: 2_439.7 },
-  { body: Body.Venus, key: 'venus', name: 'Venus', color: '#e6c990', radiusKm: 6_051.8 },
-  { body: Body.Earth, key: 'earth', name: 'Earth', color: '#4d8fc8', radiusKm: 6_371 },
-  { body: Body.Mars, key: 'mars', name: 'Mars', color: '#c96647', radiusKm: 3_389.5 },
-  { body: Body.Jupiter, key: 'jupiter', name: 'Jupiter', color: '#d8b48b', radiusKm: 69_911 },
-  { body: Body.Saturn, key: 'saturn', name: 'Saturn', color: '#dbc992', radiusKm: 58_232 },
-  { body: Body.Uranus, key: 'uranus', name: 'Uranus', color: '#9bd7db', radiusKm: 25_362 },
-  { body: Body.Neptune, key: 'neptune', name: 'Neptune', color: '#4169c1', radiusKm: 24_622 },
-  { body: Body.Pluto, key: 'pluto', name: 'Pluto', color: '#c7b6a5', radiusKm: 1_188.3 },
+  {
+    body: Body.Mercury, key: 'mercury', name: 'Mercury', color: '#b6aa9d', radiusKm: 2_439.7,
+    rotationPeriodHours: 1_407.6,
+    orbit: { semiMajorAxisAu: 0.38709843, eccentricity: 0.20563661, inclinationDegrees: 7.00559432, longitudePerihelionDegrees: 77.45771895, ascendingNodeDegrees: 48.33961819 },
+  },
+  {
+    body: Body.Venus, key: 'venus', name: 'Venus', color: '#e6c990', radiusKm: 6_051.8,
+    rotationPeriodHours: -5_832.5,
+    orbit: { semiMajorAxisAu: 0.72332102, eccentricity: 0.00676399, inclinationDegrees: 3.39777545, longitudePerihelionDegrees: 131.76755713, ascendingNodeDegrees: 76.67261496 },
+  },
+  {
+    body: Body.Earth, key: 'earth', name: 'Earth', color: '#4d8fc8', radiusKm: 6_371,
+    rotationPeriodHours: 23.9345,
+    orbit: { semiMajorAxisAu: 1.00000018, eccentricity: 0.01673163, inclinationDegrees: -0.00054346, longitudePerihelionDegrees: 102.93005885, ascendingNodeDegrees: -5.11260389 },
+  },
+  {
+    body: Body.Mars, key: 'mars', name: 'Mars', color: '#c96647', radiusKm: 3_389.5,
+    rotationPeriodHours: 24.6229,
+    orbit: { semiMajorAxisAu: 1.52371243, eccentricity: 0.09336511, inclinationDegrees: 1.85181869, longitudePerihelionDegrees: -23.91744784, ascendingNodeDegrees: 49.71320984 },
+  },
+  {
+    body: Body.Jupiter, key: 'jupiter', name: 'Jupiter', color: '#d8b48b', radiusKm: 69_911,
+    rotationPeriodHours: 9.925,
+    orbit: { semiMajorAxisAu: 5.20248019, eccentricity: 0.04853590, inclinationDegrees: 1.29861416, longitudePerihelionDegrees: 14.27495244, ascendingNodeDegrees: 100.29282654 },
+  },
+  {
+    body: Body.Saturn, key: 'saturn', name: 'Saturn', color: '#dbc992', radiusKm: 58_232,
+    rotationPeriodHours: 10.656,
+    orbit: { semiMajorAxisAu: 9.54149883, eccentricity: 0.05550825, inclinationDegrees: 2.49424102, longitudePerihelionDegrees: 92.86136063, ascendingNodeDegrees: 113.63998702 },
+  },
+  {
+    body: Body.Uranus, key: 'uranus', name: 'Uranus', color: '#9bd7db', radiusKm: 25_362,
+    rotationPeriodHours: -17.24,
+    orbit: { semiMajorAxisAu: 19.18797948, eccentricity: 0.04685740, inclinationDegrees: 0.77298127, longitudePerihelionDegrees: 172.43404441, ascendingNodeDegrees: 73.96250215 },
+  },
+  {
+    body: Body.Neptune, key: 'neptune', name: 'Neptune', color: '#4169c1', radiusKm: 24_622,
+    rotationPeriodHours: 16.11,
+    orbit: { semiMajorAxisAu: 30.06952752, eccentricity: 0.00895439, inclinationDegrees: 1.77005520, longitudePerihelionDegrees: 46.68158724, ascendingNodeDegrees: 131.78635853 },
+  },
+  {
+    body: Body.Pluto, key: 'pluto', name: 'Pluto', color: '#c7b6a5', radiusKm: 1_188.3,
+    rotationPeriodHours: -153.2928,
+    orbit: { semiMajorAxisAu: 39.236, eccentricity: 0.2444, inclinationDegrees: 17.16, longitudePerihelionDegrees: 224.067, ascendingNodeDegrees: 110.299 },
+  },
 ]);
 
 export const MAJOR_SATELLITES = Object.freeze([

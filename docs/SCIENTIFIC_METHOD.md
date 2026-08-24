@@ -40,8 +40,10 @@ Local lunar topography is not included, so “horizon” means the reference-sph
 ### Planets
 
 - Heliocentric positions are supplied by Astronomy Engine's VSOP-based compact model. For high-precision or out-of-range work, use [JPL Horizons](https://ssd-api.jpl.nasa.gov/doc/horizons.html); JPL explicitly separates lower-accuracy fitted [approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html) from its numerical ephemerides.
+- Planet markers use those integrated ephemeris positions. Their orbit guides use JPL's 3000 BCE–3000 CE fitted J2000 Keplerian elements, including eccentricity, inclination, node, and perihelion; the guides are contextual curves rather than a second position solver.
 - Prime-meridian rotation and pole orientation use the IAU Working Group on Cartographic Coordinates and Rotational Elements 2015 formulas embedded by Astronomy Engine.
 - Canvas surfaces are procedural, recognizable approximations (bands, storms, caps, clouds, albedo regions) rotated by the IAU prime-meridian angle. A sun-direction terminator is applied after surface rendering so features on the far hemisphere are not shown as illuminated. These are not cartographic image products.
+- Live surface rotation advances from that prime-meridian sample at each body's signed sidereal period. No decorative orbital or Galactic speed-up is applied: motions that are not perceptible in real time remain still, rather than being shown at an unlabeled fictional rate.
 - Mercury's fitted longitude of perihelion uses the JPL secular element rate. The display separately reports the relativistic anomalous component, approximately **43 arcseconds/century**, as explained by [Einstein Online](https://www.einstein-online.info/en/spotlight/postnewton/).
 
 ### Major satellites
