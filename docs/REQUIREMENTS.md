@@ -21,6 +21,6 @@ This ledger prevents completion from being inferred from a build alone.
 | Boundary fast-forward/rewind to heat death/inflation | boundary wheel logic + logarithmic epoch control | Timeline unit tests | Verified |
 | Five dynamic distance statistics | `getDistanceMetrics` + expandable live console | WGS84 latitude tests and methods ledger | Verified as current-rate-equivalent models |
 | Parenthetical CMB-relative totals | same metrics with `cmbFrameDistanceKm` | hierarchy verifier in JS/Swift | Verified as labeled scalar hierarchy models |
-| Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; [unsigned full Xcode macOS app/widget build](https://github.com/chensational/CosmicCalendar/actions/runs/32682813440) | Verified |
+| Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; unsigned full-Xcode app/widget builds across macOS, iOS/iPadOS, watchOS, and visionOS | Verified |
 | Performant React component | ESM/CJS package, one bounded Canvas loop | production bundle sizes and build | Verified |
 | Performance efficiency | DPR cap, offscreen pause, reduced motion, offline data | architecture audit | Verified |

@@ -30,11 +30,14 @@ jobs:
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
-      - name: Build macOS app and widget without signing
-        run: >-
-          xcodebuild
-          -project apple/CosmicCalendar.xcodeproj
-          -scheme CosmicCalendarMac
-          -destination 'platform=macOS'
-          CODE_SIGNING_ALLOWED=NO
-          build
+      - name: Build every Apple app and widget without signing
+        run: |
+          set -euo pipefail
+          xcodebuild -project apple/CosmicCalendar.xcodeproj -scheme CosmicCalendarMac \
+            -destination 'platform=macOS' CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project apple/CosmicCalendar.xcodeproj -scheme CosmicCalendarPhone \
+            -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project apple/CosmicCalendar.xcodeproj -scheme CosmicCalendarWatch \
+            -destination 'generic/platform=watchOS Simulator' CODE_SIGNING_ALLOWED=NO build
+          xcodebuild -project apple/CosmicCalendar.xcodeproj -scheme CosmicCalendarVision \
+            -destination 'generic/platform=visionOS Simulator' CODE_SIGNING_ALLOWED=NO build
