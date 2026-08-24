@@ -22,6 +22,11 @@ describe('Earth-local ephemeris', () => {
     expect(snapshot.sun.altitudeDegrees).toBeCloseTo(7.895707, 0);
     expect(snapshot.milkyWay).toHaveLength(49);
     expect(snapshot.sun.apparentMotion?.azimuthDegreesPerSecond).toBeTypeOf('number');
+    expect(snapshot.sun.angularDiameterDegrees).toBeGreaterThan(0.52);
+    expect(snapshot.sun.angularDiameterDegrees).toBeLessThan(0.55);
+    expect(Math.abs(snapshot.sun.subObserverLatitudeDegrees)).toBeLessThan(8);
+    expect(Number.isFinite(snapshot.sun.subObserverLongitudeDegrees)).toBe(true);
+    expect(Number.isFinite(snapshot.sun.northPoleBearingRadians)).toBe(true);
     expect(snapshot.moon.angularDiameterDegrees).toBeGreaterThan(0.48);
     expect(snapshot.moon.angularDiameterDegrees).toBeLessThan(0.57);
     expect(Math.abs(snapshot.moon.subObserverLatitudeDegrees)).toBeLessThan(8);
@@ -86,6 +91,18 @@ describe('solar-system model', () => {
     expect(snapshot.planets.find((planet) => planet.key === 'neptune')?.distanceAu).toBeGreaterThan(29);
     expect(snapshot.planets.every((planet) => Number.isFinite(planet.rotationPeriodHours))).toBe(true);
     expect(snapshot.planets.find((planet) => planet.key === 'mercury')?.orbit.eccentricity).toBeGreaterThan(0.2);
+    for (const solarAxis of [
+      snapshot.sun.axisNorthEcliptic,
+      snapshot.sun.primeMeridianEcliptic,
+      snapshot.sun.eastEcliptic,
+    ]) {
+      expect(Math.hypot(solarAxis.x, solarAxis.y, solarAxis.z)).toBeCloseTo(1, 10);
+    }
+    expect(
+      snapshot.sun.axisNorthEcliptic.x * snapshot.sun.primeMeridianEcliptic.x +
+      snapshot.sun.axisNorthEcliptic.y * snapshot.sun.primeMeridianEcliptic.y +
+      snapshot.sun.axisNorthEcliptic.z * snapshot.sun.primeMeridianEcliptic.z,
+    ).toBeCloseTo(0, 10);
     for (const planet of snapshot.planets) {
       expect(Math.hypot(
         planet.heliocentricEclipticAu.x,

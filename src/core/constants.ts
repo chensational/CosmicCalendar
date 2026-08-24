@@ -15,6 +15,7 @@ export const SUN_GALACTIC_SPEED_KM_S = 233.3;
 export const LOCAL_GROUP_CMB_SPEED_KM_S = 627;
 export const WGS84_EQUATORIAL_RADIUS_KM = 6_378.137;
 export const WGS84_ECCENTRICITY_SQUARED = 6.69437999014e-3;
+export const SUN_RADIUS_KM = 695_700;
 export const MOON_MEAN_RADIUS_KM = 1_737.4;
 export const APOLLO_11_SITE = Object.freeze({
   latitude: 0.67409,

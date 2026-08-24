@@ -3,6 +3,8 @@ name: Deploy demo
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '17 */3 * * *'
   workflow_dispatch:
 
 permissions:
@@ -24,6 +26,12 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Install solar image tooling
+        continue-on-error: true
+        run: python3 -m pip install --disable-pip-version-check Pillow
+      - name: Refresh the near-real-time SDO photosphere
+        continue-on-error: true
+        run: npm run sun:update
       - run: npm run build:demo
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

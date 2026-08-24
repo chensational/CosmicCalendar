@@ -27,6 +27,13 @@ The implementation is cross-checked against [JPL Horizons](https://ssd.jpl.nasa.
 
 Astronomy Engine intentionally trades the weight of full JPL kernels for compact client code; its author documents errors up to about 0.4 arcminute for some optimized planetary calculations. Precision is suitable for unaided-sky orientation, not spacecraft navigation or occultation timing.
 
+### Solar photosphere
+
+- Apparent solar diameter is calculated from the topocentric Sun range and the 695,700 km nominal radius. The IAU rotation pole is projected into the local horizontal frame, so the photosphere's north direction follows the real parallactic orientation rather than staying screen-up.
+- Near the observation timestamp, the visible disc comes from the [NASA Solar Dynamics Observatory HMI continuum quicklook](https://sdo.gsfc.nasa.gov/data/). The source 256×256 JPEG is disk-cropped to 96×96 at build time, hash-pinned with its HTTP observation timestamp, refreshed by Pages every three hours, and embedded so the browser contacts no third party. The renderer refuses to use it more than 36 hours from the selected date.
+- [NASA's photosphere description](https://solarscience.msfc.nasa.gov/surface.shtml) documents granulation, sunspots, limb darkening, and gaseous differential rotation; [NASA's Sun facts](https://science.nasa.gov/sun/facts/) gives the rounded 25-day equator and 36-day pole periods. The stale/historical fallback therefore combines a quadratic visible-continuum limb response, eight-minute evolving granulation, bounded active-latitude spots with growth/decay, and latitude-dependent 25–36 day rotation. These fallback active regions are physically informed but synthetic, and the UI labels them `PHYSICAL PROCEDURAL FALLBACK`.
+- The solar pole and central-meridian basis follows the [IAU Working Group](https://aa.usno.navy.mil/downloads/reports/Archinaletal2011a.pdf) α₀ = 286.13°, δ₀ = 63.87°, W = 84.176° + 14.1844°d convention through Astronomy Engine. The SDO product is Earth-facing; using its tiny disc in the Solar-System overview does not claim knowledge of the unobserved far side.
+
 ### Lunar disc
 
 - The observed Moon-to-site and Moon-to-Sun vectors are calculated topocentrically. Their dot product gives the physical solar phase angle and illuminated fraction; apparent diameter uses topocentric range rather than a geocentric constant.

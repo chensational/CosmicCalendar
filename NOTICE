@@ -16,3 +16,11 @@ The stellar catalog asset is derived from the Bright Star Catalogue, Fifth Revis
 Edition (Hoffleit and Warren, 1991), catalog V/50, disseminated by the NASA
 Astronomical Data Center and CDS VizieR. Provenance and checksums are recorded in
 src/data/bright-stars.json.
+
+The compact solar photosphere frame is derived from the NASA Solar Dynamics
+Observatory HMI continuum quicklook. Observation time, source URL, processing,
+credit, and checksums are recorded in src/data/sun-hmi.json.
+
+The lunar albedo map is derived from the NASA Scientific Visualization Studio
+LRO/WAC color mosaic. Provenance and checksums are recorded in
+src/data/moon-albedo.json.

@@ -7,12 +7,14 @@ import {
   wheelDeltaToScaleStep,
 } from '../core/interaction';
 import type { HorizonSnapshot, LunarHorizonSnapshot, SolarSystemSnapshot, VisibleStar } from '../core/types';
+import type { SolarObservation } from '../hooks/useSolarObservation';
 import { renderCosmicFrame } from './canvasRenderer';
 
 export interface CosmicCanvasProps {
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
+  solarObservation?: SolarObservation;
   stars: readonly VisibleStar[];
   scalePosition: number;
   cosmicAgeYears: number;
@@ -25,6 +27,7 @@ export function CosmicCanvas({
   horizon,
   lunar,
   solar,
+  solarObservation,
   stars,
   scalePosition,
   cosmicAgeYears,
@@ -35,12 +38,12 @@ export function CosmicCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const targetScaleRef = useRef(scalePosition);
   const displayScaleRef = useRef(scalePosition);
-  const frameRef = useRef({ horizon, lunar, solar, stars, cosmicAgeYears, live, reducedMotion });
+  const frameRef = useRef({ horizon, lunar, solar, solarObservation, stars, cosmicAgeYears, live, reducedMotion });
   const requestRenderRef = useRef<() => void>(() => undefined);
   const onWheelRef = useRef(onWheel);
 
   targetScaleRef.current = scalePosition;
-  frameRef.current = { horizon, lunar, solar, stars, cosmicAgeYears, live, reducedMotion };
+  frameRef.current = { horizon, lunar, solar, solarObservation, stars, cosmicAgeYears, live, reducedMotion };
   onWheelRef.current = onWheel;
 
   useEffect(() => {
@@ -204,7 +207,7 @@ export function CosmicCanvas({
 
   useEffect(() => {
     requestRenderRef.current();
-  }, [cosmicAgeYears, horizon, live, lunar, reducedMotion, scalePosition, solar, stars]);
+  }, [cosmicAgeYears, horizon, live, lunar, reducedMotion, scalePosition, solar, solarObservation, stars]);
 
   return (
     <canvas

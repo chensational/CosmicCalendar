@@ -27,6 +27,7 @@ import {
   MAJOR_SATELLITES,
   PARENT_RADIUS_KM,
   PLANETS,
+  SUN_RADIUS_KM,
 } from './constants';
 import {
   clamp,
@@ -146,6 +147,18 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
   const observerEqj = asCartesian(ObserverVector(date, observer, false));
   const moonEqj = asCartesian(GeoVector(Body.Moon, date, true));
   const sunEqj = asCartesian(GeoVector(Body.Sun, date, true));
+  const solarAxis = RotationAxis(Body.Sun, date);
+  const solarBasis = bodyFixedEquatorialBasis(solarAxis.ra, solarAxis.dec, solarAxis.spin);
+  const sunToObserver = normalize(subtract(observerEqj, sunEqj));
+  const solarPoleEqd = RotateVector(Rotation_EQJ_EQD(MakeTime(date)), solarAxis.north);
+  const solarPoleEquatorial = EquatorFromVector(solarPoleEqd);
+  const solarPoleHorizontal = Horizon(
+    date,
+    observer,
+    solarPoleEquatorial.ra,
+    solarPoleEquatorial.dec,
+    'normal',
+  );
   const moonToObserver = normalize(subtract(observerEqj, moonEqj));
   const moonToSun = normalize(subtract(sunEqj, moonEqj));
   const solarPhaseAngle = radiansToDegrees(Math.acos(clamp(dot(moonToObserver, moonToSun), -1, 1)));
@@ -183,7 +196,28 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
   return {
     date,
     observer: location,
-    sun,
+    sun: {
+      ...sun,
+      angularDiameterDegrees: radiansToDegrees(2 * Math.atan(
+        SUN_RADIUS_KM / Math.sqrt((sun.distanceKm ?? magnitude(sunEqj) * AU_KM) ** 2 - SUN_RADIUS_KM ** 2),
+      )),
+      subObserverLatitudeDegrees: radiansToDegrees(Math.asin(clamp(
+        dot(sunToObserver, solarBasis.north),
+        -1,
+        1,
+      ))),
+      subObserverLongitudeDegrees: radiansToDegrees(Math.atan2(
+        dot(sunToObserver, solarBasis.east),
+        dot(sunToObserver, solarBasis.meridian),
+      )),
+      northPoleBearingRadians: greatCircleBearingRadians(
+        sun.azimuthDegrees,
+        sun.altitudeDegrees,
+        solarPoleHorizontal.azimuth,
+        solarPoleHorizontal.altitude,
+      ),
+      primeMeridianDegrees: solarAxis.spin,
+    },
     moon: {
       ...moon,
       phaseAngleDegrees: moonPhaseAngle,
@@ -486,8 +520,15 @@ export function getSolarSystemSnapshot(date: Date): SolarSystemSnapshot {
     ? date
     : new Date();
   const planets = PLANETS.map((planet) => getPlanetState(safeDate, planet));
+  const solarAxis = RotationAxis(Body.Sun, safeDate);
+  const solarBasis = bodyFixedEquatorialBasis(solarAxis.ra, solarAxis.dec, solarAxis.spin);
   return {
     date,
+    sun: {
+      axisNorthEcliptic: rotateEqjToEcliptic(solarBasis.north),
+      primeMeridianEcliptic: rotateEqjToEcliptic(solarBasis.meridian),
+      eastEcliptic: rotateEqjToEcliptic(solarBasis.east),
+    },
     planets,
     satellites: getSatelliteStates(safeDate, planets),
     mercuryPerihelionLongitudeDegrees: getMercuryPerihelionLongitude(safeDate),

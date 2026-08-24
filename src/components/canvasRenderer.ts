@@ -19,6 +19,14 @@ import {
   sphereCoordinates,
   toSolarView,
 } from '../core/planetSurface';
+import {
+  proceduralSunspotGroups,
+  solarGranulation,
+  solarLimbDarkening,
+  topocentricSolarSurfaceFrame,
+  type SolarSurfaceFrame,
+} from '../core/solarSurface';
+import type { SolarObservation } from '../hooks/useSolarObservation';
 import type {
   CartesianPosition,
   HorizontalPosition,
@@ -39,6 +47,7 @@ export interface CanvasFrame {
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
+  solarObservation?: SolarObservation;
   stars: readonly VisibleStar[];
   cosmicAgeYears: number;
   reducedMotion: boolean;
@@ -56,6 +65,7 @@ const STAR_FIELD = Array.from({ length: 170 }, (_, index) => ({
   scintillationRate: 0.8 + hashUnit(`star-p-${index}`) * 2.2,
 }));
 const starPathCache = new Map<string, readonly Path2D[]>();
+const solarTextureCache = new Map<string, SurfaceCanvas>();
 
 function starPaths(width: number, height: number) {
   const cacheKey = `${Math.round(width)}:${Math.round(height)}`;
@@ -132,6 +142,130 @@ function drawGlow(
   context.arc(x, y, radius * 3.5, 0, TAU);
   context.fill();
   context.restore();
+}
+
+function solarTextureKey(
+  radius: number,
+  date: Date,
+  frame: SolarSurfaceFrame,
+  redGiantProgress: number,
+): string {
+  const quantizeVector = (vector: CartesianPosition) =>
+    [vector.x, vector.y, vector.z].map((value) => Math.round(value * 48)).join(',');
+  return [
+    Math.round(radius * 4),
+    Math.floor(date.getTime() / (8 * 60 * 1_000)),
+    quantizeVector(frame.pole),
+    quantizeVector(frame.meridian),
+    Math.round(redGiantProgress * 12),
+  ].join(':');
+}
+
+function renderProceduralSolarTexture(
+  radius: number,
+  date: Date,
+  frame: SolarSurfaceFrame,
+  redGiantProgress: number,
+): SurfaceCanvas {
+  const cacheKey = solarTextureKey(radius, date, frame, redGiantProgress);
+  const cached = solarTextureCache.get(cacheKey);
+  if (cached) return cached;
+  const size = Math.max(28, Math.ceil(radius * 4));
+  const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(size, size)
+    : Object.assign(document.createElement('canvas'), { width: size, height: size });
+  const surfaceContext = surface.getContext('2d');
+  if (!surfaceContext) return surface;
+  const image = surfaceContext.createImageData(size, size);
+  const half = size / 2;
+  const spots = proceduralSunspotGroups(date);
+  const centerColor = blendColor([255, 224, 132], [255, 143, 84], redGiantProgress);
+  const limbColor = blendColor([232, 103, 25], [181, 50, 31], redGiantProgress);
+
+  for (let pixelY = 0; pixelY < size; pixelY += 1) {
+    const normalY = (pixelY + 0.5 - half) / half;
+    for (let pixelX = 0; pixelX < size; pixelX += 1) {
+      const normalX = (pixelX + 0.5 - half) / half;
+      const radiusSquared = normalX ** 2 + normalY ** 2;
+      if (radiusSquared >= 1) continue;
+      const mu = Math.sqrt(1 - radiusSquared);
+      const normal = { x: normalX, y: normalY, z: mu };
+      const { latitudeRadians, longitudeRadians } = sphereCoordinates(
+        normal,
+        frame.pole,
+        frame.meridian,
+        frame.east,
+      );
+      let spotShadow = 0;
+      for (const spot of spots) {
+        const cosineSeparation =
+          Math.sin(latitudeRadians) * Math.sin(spot.latitudeRadians) +
+          Math.cos(latitudeRadians) * Math.cos(spot.latitudeRadians) *
+          Math.cos(longitudeRadians - spot.longitudeRadians);
+        const separation = Math.acos(clamp(cosineSeparation, -1, 1));
+        const normalizedSeparation = separation / spot.angularRadiusRadians;
+        spotShadow = Math.max(
+          spotShadow,
+          Math.exp(-0.5 * normalizedSeparation ** 4) * spot.strength,
+        );
+      }
+      const limb = solarLimbDarkening(mu);
+      const granulation = solarGranulation(latitudeRadians, longitudeRadians, date);
+      const brightness = limb * granulation * (1 - spotShadow * 0.76);
+      const color = blendColor(limbColor, centerColor, Math.sqrt(mu));
+      const index = (pixelY * size + pixelX) * 4;
+      image.data[index] = Math.round(clamp(color[0] * brightness, 0, 255));
+      image.data[index + 1] = Math.round(clamp(color[1] * brightness, 0, 255));
+      image.data[index + 2] = Math.round(clamp(color[2] * brightness, 0, 255));
+      image.data[index + 3] = Math.round(clamp((1 - radiusSquared) * size * 0.5, 0, 1) * 255);
+    }
+  }
+  surfaceContext.putImageData(image, 0, 0);
+  solarTextureCache.set(cacheKey, surface);
+  if (solarTextureCache.size > 24) {
+    const oldest = solarTextureCache.keys().next().value;
+    if (oldest) solarTextureCache.delete(oldest);
+  }
+  return surface;
+}
+
+function drawSolarPhotosphere(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  date: Date,
+  frame: SolarSurfaceFrame,
+  northPoleBearingRadians: number,
+  observation: SolarObservation | undefined,
+  redGiantProgress = 0,
+  atmosphericReddening = 0,
+) {
+  if (observation && redGiantProgress === 0) {
+    // The checked-in quicklook is already cropped to the observed solar disc.
+    context.save();
+    context.translate(x, y);
+    context.rotate(northPoleBearingRadians);
+    context.beginPath();
+    context.arc(0, 0, radius, 0, TAU);
+    context.clip();
+    context.drawImage(observation.image, -radius, -radius, radius * 2, radius * 2);
+    if (atmosphericReddening > 0) {
+      context.fillStyle = `rgba(226, 55, 24, ${atmosphericReddening * 0.34})`;
+      context.fillRect(-radius, -radius, radius * 2, radius * 2);
+    }
+    context.restore();
+  } else {
+    const texture = renderProceduralSolarTexture(radius, date, frame, redGiantProgress);
+    context.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
+  }
+  context.strokeStyle = redGiantProgress > 0
+    ? 'rgba(255, 117, 73, .58)'
+    : 'rgba(255, 213, 107, .6)';
+  context.lineWidth = Math.max(0.65, radius * 0.045);
+  context.beginPath();
+  context.arc(x, y, radius, 0, TAU);
+  context.stroke();
 }
 
 function drawPhaseDisc(
@@ -426,8 +560,9 @@ function drawCatalogStars(
 }
 
 function drawHorizonScene(frame: CanvasFrame) {
-  const { context, width, height, horizon, lunar, stars, elapsedSeconds, realtimeOffsetSeconds, cosmicAgeYears } = frame;
+  const { context, width, height, horizon, lunar, solarObservation, stars, elapsedSeconds, realtimeOffsetSeconds, cosmicAgeYears } = frame;
   const earthFormationAge = 13.8e9 - 4.54e9;
+  const sunBirthAge = 13.8e9 - 4.567e9;
   const redGiantProgress = clamp((cosmicAgeYears - (13.8e9 + 4.5e9)) / 8e8, 0, 1);
   const postEarthProgress = clamp((cosmicAgeYears - (13.8e9 + 7.5e9)) / 1e9, 0, 1);
   const animatedSun = apparentPosition(horizon.sun, realtimeOffsetSeconds);
@@ -499,11 +634,31 @@ function drawHorizonScene(frame: CanvasFrame) {
   context.restore();
 
   const sun = skyPoint(width, height, animatedSun);
-  drawGlow(context, sun.x, sun.y, 18, 'rgba(255, 205, 112, .76)', daylight);
-  context.fillStyle = redGiantProgress > 0.05 ? '#df6a42' : '#ffd986';
-  context.beginPath();
-  context.arc(sun.x, sun.y, 7 + daylight * 4 + redGiantProgress * Math.min(width, height) * 0.055, 0, TAU);
-  context.fill();
+  if (cosmicAgeYears >= sunBirthAge) {
+    drawGlow(context, sun.x, sun.y, 18, 'rgba(255, 205, 112, .76)', daylight);
+    const sunRadius = clamp(
+      9.3 * horizon.sun.angularDiameterDegrees / 0.533,
+      8.6,
+      10.2,
+    ) + redGiantProgress * Math.min(width, height) * 0.055;
+    const solarFrame = topocentricSolarSurfaceFrame(
+      horizon.sun.subObserverLatitudeDegrees,
+      horizon.sun.subObserverLongitudeDegrees,
+      horizon.sun.northPoleBearingRadians,
+    );
+    drawSolarPhotosphere(
+      context,
+      sun.x,
+      sun.y,
+      sunRadius,
+      horizon.date,
+      solarFrame,
+      horizon.sun.northPoleBearingRadians,
+      solarObservation,
+      redGiantProgress,
+      1 - smoothstep(-1, 12, sunHeight),
+    );
+  }
 
   const moon = skyPoint(width, height, animatedMoon);
   drawGlow(context, moon.x, moon.y, 11, 'rgba(182, 208, 255, .38)', 1);
@@ -1052,7 +1207,7 @@ function drawSaturnRingHalf(
 }
 
 function drawSolarScene(frame: CanvasFrame) {
-  const { context, width, height, solar, elapsedSeconds, realtimeOffsetSeconds } = frame;
+  const { context, width, height, solar, solarObservation, elapsedSeconds, realtimeOffsetSeconds } = frame;
   const background = context.createRadialGradient(width * 0.5, height * 0.5, 0, width * 0.5, height * 0.5, width * 0.65);
   background.addColorStop(0, '#171225');
   background.addColorStop(1, '#02040c');
@@ -1079,14 +1234,22 @@ function drawSolarScene(frame: CanvasFrame) {
   });
 
   drawGlow(context, centerX, centerY, 24, 'rgba(255, 184, 73, .75)');
-  const sunGradient = context.createRadialGradient(centerX - 7, centerY - 9, 2, centerX, centerY, 23);
-  sunGradient.addColorStop(0, '#fff5be');
-  sunGradient.addColorStop(0.5, '#ffc04a');
-  sunGradient.addColorStop(1, '#b9470d');
-  context.fillStyle = sunGradient;
-  context.beginPath();
-  context.arc(centerX, centerY, 19, 0, TAU);
-  context.fill();
+  const solarFrame: SolarSurfaceFrame = {
+    pole: normalize(toSolarView(solar.sun.axisNorthEcliptic)),
+    meridian: normalize(toSolarView(solar.sun.primeMeridianEcliptic)),
+    east: normalize(toSolarView(solar.sun.eastEcliptic)),
+  };
+  const solarNorthPoleBearing = Math.atan2(solarFrame.pole.x, -solarFrame.pole.y);
+  drawSolarPhotosphere(
+    context,
+    centerX,
+    centerY,
+    19,
+    solar.date,
+    solarFrame,
+    solarNorthPoleBearing,
+    solarObservation,
+  );
 
   solar.planets.forEach((planet) => {
     const eclipticPosition = planet.heliocentricEclipticAu;
@@ -1104,7 +1267,10 @@ function drawSolarScene(frame: CanvasFrame) {
     planetScreen.set(planet.key, { x, y, radius, eclipticPosition });
     context.fillStyle = 'rgba(231, 237, 249, .82)';
     context.font = '500 9px ui-monospace, SFMono-Regular, Menlo, monospace';
-    context.fillText(planet.name.toUpperCase(), x + radius + 4, y - radius);
+    const labelDirection = x < centerX ? -1 : 1;
+    context.textAlign = labelDirection < 0 ? 'right' : 'left';
+    context.fillText(planet.name.toUpperCase(), x + labelDirection * (radius + 4), y - radius);
+    context.textAlign = 'start';
   });
 
   solar.satellites.forEach((satellite) => {
@@ -1126,8 +1292,16 @@ function drawSolarScene(frame: CanvasFrame) {
   context.save();
   context.setLineDash([4, 4]);
   context.strokeStyle = 'rgba(255, 200, 125, .52)';
+  const perihelionDirection = {
+    x: Math.cos(perihelionAngle),
+    y: Math.sin(perihelionAngle) * 0.48,
+  };
+  const perihelionDirectionLength = Math.hypot(perihelionDirection.x, perihelionDirection.y);
   context.beginPath();
-  context.moveTo(centerX, centerY);
+  context.moveTo(
+    centerX + perihelionDirection.x / perihelionDirectionLength * 28,
+    centerY + perihelionDirection.y / perihelionDirectionLength * 28,
+  );
   context.lineTo(centerX + Math.cos(perihelionAngle) * guide, centerY + Math.sin(perihelionAngle) * guide * 0.48);
   context.stroke();
   context.restore();
@@ -1136,7 +1310,7 @@ function drawSolarScene(frame: CanvasFrame) {
   const penumbra = solar.satellites.filter((satellite) =>
     satellite.sunlightFraction > 0.001 && satellite.sunlightFraction < 0.999).length;
   const umbra = solar.satellites.length - fullSun - penumbra;
-  roundedRect(context, 18, height - 122, Math.min(326, width - 36), 66, 11);
+  roundedRect(context, 18, height - 139, Math.min(344, width - 36), 83, 11);
   context.fillStyle = 'rgba(4, 7, 18, .74)';
   context.fill();
   context.fillStyle = '#aab9cf';
@@ -1144,10 +1318,17 @@ function drawSolarScene(frame: CanvasFrame) {
   context.fillText(
     `${solar.satellites.length} MAJOR SATELLITES · LOCAL SCALE EXAGGERATED`,
     30,
-    height - 99,
+    height - 116,
   );
   context.fillText(
     `${fullSun} FULL SUN · ${penumbra} PENUMBRA · ${umbra} UMBRA`,
+    30,
+    height - 99,
+  );
+  context.fillText(
+    solarObservation
+      ? `SUN · SDO/HMI CONTINUUM · ${solarObservation.observedAt.toISOString().slice(11, 16)} UTC`
+      : 'SUN · PHYSICAL PROCEDURAL FALLBACK',
     30,
     height - 82,
   );

@@ -14,6 +14,7 @@ import type { CosmicScale, ObserverLocation } from '../core/types';
 import { useObserverLocation } from '../hooks/useObserverLocation';
 import { useBrightStarCatalog } from '../hooks/useBrightStarCatalog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { useSolarObservation } from '../hooks/useSolarObservation';
 import { getVisibleStars } from '../core/stars';
 import { CosmicCanvas } from './CosmicCanvas';
 
@@ -133,6 +134,7 @@ export function CosmicCalendar({
   useEffect(() => onLocationChange?.(location), [location, onLocationChange]);
 
   const calculationDate = useMemo(() => new Date(Math.floor(selectedDate.getTime() / 5_000) * 5_000), [selectedDate]);
+  const solarObservation = useSolarObservation(calculationDate);
   const horizon = useMemo(() => getHorizonSnapshot(calculationDate, location), [calculationDate, location]);
   const lunar = useMemo(() => getLunarHorizonSnapshot(calculationDate), [calculationDate]);
   const solar = useMemo(() => getSolarSystemSnapshot(calculationDate), [calculationDate]);
@@ -224,6 +226,7 @@ export function CosmicCalendar({
             horizon={horizon}
             lunar={lunar}
             solar={solar}
+            solarObservation={solarObservation}
             stars={stars}
             scalePosition={scalePosition}
             cosmicAgeYears={cosmicAgeYears}

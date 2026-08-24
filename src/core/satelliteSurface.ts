@@ -1,8 +1,8 @@
-import { AU_KM } from './constants';
+import { AU_KM, SUN_RADIUS_KM } from './constants';
 import { clamp, cross, dot, magnitude, normalize } from './math';
 import type { CartesianPosition } from './types';
 
-export const SUN_RADIUS_KM = 695_700;
+export { SUN_RADIUS_KM } from './constants';
 
 /** Fraction of the luminous circular source not covered by an occultor. */
 export function visibleDiscFraction(

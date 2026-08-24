@@ -1,0 +1,14 @@
+{
+  "source": "https://sdo.gsfc.nasa.gov/data/",
+  "sourceAsset": "https://sdo.gsfc.nasa.gov/assets/img/latest/latest_256_HMIIC.jpg",
+  "instrument": "NASA Solar Dynamics Observatory / HMI",
+  "product": "near-real-time full-disc continuum intensity quicklook",
+  "observedAt": "2026-08-24T08:40:05.000Z",
+  "fetchedAt": "2026-08-24T08:42:43.689Z",
+  "encoding": "96\u00d796 disk crop, JPEG quality 88",
+  "sourceByteLength": 12976,
+  "sourceSha256": "2ed635d62e5e08126dcf376297aff667186f0b2a891c27832225e4ab3aeaa960",
+  "byteLength": 2305,
+  "sha256": "8912931efa8854216de898f720ce55514e50e58cbe46520c216010fafd040f3a",
+  "credit": "NASA/SDO and the HMI science team"
+}

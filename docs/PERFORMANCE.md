@@ -8,7 +8,7 @@
 - `IntersectionObserver` and Page Visibility stop the animation offscreen or in a background tab; `ResizeObserver` updates backing resolution only when necessary.
 - Motion preference is honored. With reduced motion enabled, changes render a static frame instead of maintaining `requestAnimationFrame`.
 - Transition damping is time-based rather than frame-based, so scale motion has the same timing on 24, 30, 60, and 120 Hz displays.
-- Wheel input is normalized across pixel, line, and page delta modes, capped at 4% of one scale per event, and captured with a non-passive listener so interacting with the visualization does not scroll the document underneath it.
+- Wheel input is normalized across pixel, line, and page delta modes, capped at 2% of one scale per event, and captured with a non-passive listener so interacting with the visualization does not scroll the document underneath it.
 - The 9,096-record Bright Star Catalogue is a 160 KB quantized binary loaded asynchronously. Its full proper-motion/precession/horizon/extinction projection takes about 2.1 ms in the checked Chromium fixture every five seconds; only the resulting visible hemisphere is retained.
 - Catalog star paths and Kepler orbit paths are generated once per state/size and reused. Space stars remain photometrically stable; only bright terrestrial stars receive altitude-sensitive scintillation.
 - Astronomy is memoized by location and a five-second date bucket. Calendar and multi-billion-year distance models recalculate only when their inputs change.
@@ -17,16 +17,17 @@
 - Planet surfaces rasterize into tiny 2× supersampled transparent canvases keyed by quantized pole, rotation, lighting, and screen radius. The expensive spherical lighting/albedo loop runs only on a cache miss; normal Solar frames use nine small `drawImage` calls.
 - Major-satellite discs share that bounded cache. Their textures are normally only 12×12 pixels; after a state/lighting cache miss, all 20 satellites add 20 small `drawImage` calls rather than per-frame surface loops.
 - The terrestrial Moon follows the same cache-first pattern. Its real 128×64 LRO luminance map occupies 8 KiB before base64 wrapping; only a roughly 36×36 supersampled disc is shaded on a quantized libration/phase cache miss, then normal frames use one `drawImage`.
-- No third-party request occurs at runtime. The web demo makes one same-origin static catalog request; JPL satellite seeds and every astronomy model remain checked in.
+- The present-day Sun uses a disk-cropped 96×96 SDO/HMI JPEG of roughly 2.3 KiB. Pages refreshes it at build time every three hours; it is embedded in the bundle, so no frame-time shading loop or third-party browser request is added. Historical/stale-date procedural solar textures are 4× supersampled, quantized to eight-minute epochs, and retained in a separate 24-entry FIFO cache.
+- No third-party request occurs at runtime. The web demo makes one same-origin static catalog request; the compact SDO frame, JPL satellite seeds, and every astronomy model remain checked in or embedded at build time.
 
 Current production output:
 
 | Artifact | Raw | Gzip |
 | --- | ---: | ---: |
-| React library JS (ESM, including CosmicWatermark export) | ~216 KB | ~75 KB |
+| React library JS (ESM, including CosmicWatermark export) | ~225 KB | ~79 KB |
 | Lazy star-catalog library chunk | ~218.5 KB | ~140 KB |
 | Component CSS | ~13.5 KB | ~3.5 KB |
-| Demo JS | ~331 KB | ~121 KB |
+| Demo JS | ~339 KB | ~125 KB |
 | Demo star-catalog binary | ~164 KB | n/a |
 
 The inherited `CosmicWatermark` loads Three.js dynamically only when that optional decorative component is mounted; the main calendar stays on Canvas 2D because its vector workload remains comfortably bounded without a WebGL scene graph or texture uploads.

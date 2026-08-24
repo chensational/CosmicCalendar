@@ -38,7 +38,13 @@ export interface VisibleStar {
 export interface HorizonSnapshot {
   date: Date;
   observer: ObserverLocation;
-  sun: HorizontalPosition;
+  sun: HorizontalPosition & {
+    angularDiameterDegrees: number;
+    subObserverLatitudeDegrees: number;
+    subObserverLongitudeDegrees: number;
+    northPoleBearingRadians: number;
+    primeMeridianDegrees: number;
+  };
   moon: HorizontalPosition & {
     phaseAngleDegrees: number;
     solarPhaseAngleDegrees: number;
@@ -118,6 +124,11 @@ export interface SatelliteState {
 
 export interface SolarSystemSnapshot {
   date: Date;
+  sun: {
+    axisNorthEcliptic: CartesianPosition;
+    primeMeridianEcliptic: CartesianPosition;
+    eastEcliptic: CartesianPosition;
+  };
   planets: PlanetState[];
   satellites: SatelliteState[];
   mercuryPerihelionLongitudeDegrees: number;

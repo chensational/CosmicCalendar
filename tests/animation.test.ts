@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { PLANETS } from '../src/core/constants';
 import {
@@ -7,6 +9,7 @@ import {
   MOON_ALBEDO_WIDTH,
 } from '../src/data/moon-albedo-embedded';
 import moonAlbedoManifest from '../src/data/moon-albedo.json';
+import solarImageManifest from '../src/data/sun-hmi.json';
 import { greatCircleBearingRadians, shortestAngularDifference, smoothstep } from '../src/core/math';
 import {
   lunarReflectance,
@@ -28,6 +31,15 @@ import {
   tidallyLockedBasis,
   visibleDiscFraction,
 } from '../src/core/satelliteSurface';
+import {
+  proceduralSunspotGroups,
+  solarActivityLevel,
+  solarDifferentialRotationPeriodDays,
+  solarGranulation,
+  solarLimbDarkening,
+  solarObservationMatchesDate,
+  topocentricSolarSurfaceFrame,
+} from '../src/core/solarSurface';
 
 describe('physically coherent animation geometry', () => {
   it('draws eccentric orbit guides with the Sun at a focus', () => {
@@ -59,6 +71,47 @@ describe('physically coherent animation geometry', () => {
     expect(smoothstep(-18, -2, -20)).toBe(0);
     expect(smoothstep(-18, -2, -10)).toBeCloseTo(0.5, 12);
     expect(smoothstep(-18, -2, 0)).toBe(1);
+  });
+
+  it('uses bounded differential rotation and visible-continuum limb darkening for the Sun', () => {
+    expect(solarDifferentialRotationPeriodDays(0)).toBe(25);
+    expect(solarDifferentialRotationPeriodDays(Math.PI / 2)).toBe(36);
+    expect(solarLimbDarkening(1)).toBe(1);
+    expect(solarLimbDarkening(0)).toBeCloseTo(0.3, 12);
+    expect(solarLimbDarkening(0.5)).toBeGreaterThan(solarLimbDarkening(0));
+    expect(solarActivityLevel(new Date('2026-08-24T00:00:00Z'))).toBeGreaterThanOrEqual(0.08);
+    expect(solarActivityLevel(new Date('2026-08-24T00:00:00Z'))).toBeLessThanOrEqual(1);
+    expect(solarGranulation(0.2, -0.7, new Date('2026-08-24T00:00:00Z'))).toBeGreaterThan(0.92);
+    expect(solarGranulation(0.2, -0.7, new Date('2026-08-24T00:00:00Z'))).toBeLessThan(1.01);
+  });
+
+  it('never presents a stale solar observation as the selected-date photosphere', () => {
+    const observed = new Date('2026-08-24T08:40:00Z');
+    expect(solarObservationMatchesDate(new Date('2026-08-25T20:40:00Z'), observed)).toBe(true);
+    expect(solarObservationMatchesDate(new Date('2026-08-25T20:40:01Z'), observed)).toBe(false);
+    expect(solarObservationMatchesDate(new Date('invalid'), observed)).toBe(false);
+  });
+
+  it('keeps fallback sunspots inside active latitudes with continuous lifetimes', () => {
+    const groups = proceduralSunspotGroups(new Date('2026-08-24T08:30:00Z'));
+    expect(groups.length).toBeGreaterThan(0);
+    for (const group of groups) {
+      expect(Math.abs(group.latitudeRadians)).toBeLessThan(45 * Math.PI / 180);
+      expect(Math.abs(group.longitudeRadians)).toBeLessThanOrEqual(Math.PI);
+      expect(group.angularRadiusRadians).toBeGreaterThan(0);
+      expect(group.strength).toBeGreaterThan(0);
+      expect(group.strength).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('builds an orthonormal topocentric solar surface frame', () => {
+    const frame = topocentricSolarSurfaceFrame(5.2, -31.4, Math.PI / 3);
+    const vectors = [frame.pole, frame.meridian, frame.east];
+    for (const vector of vectors) {
+      expect(Math.hypot(vector.x, vector.y, vector.z)).toBeCloseTo(1, 12);
+    }
+    expect(frame.pole.x * frame.meridian.x + frame.pole.y * frame.meridian.y + frame.pole.z * frame.meridian.z).toBeCloseTo(0, 12);
+    expect(frame.east.x * frame.meridian.x + frame.east.y * frame.meridian.y + frame.east.z * frame.meridian.z).toBeCloseTo(0, 12);
   });
 
   it('orients an illuminated limb toward the Sun on the local sky sphere', () => {
@@ -133,6 +186,15 @@ describe('physically coherent animation geometry', () => {
     expect(albedo).toHaveLength(MOON_ALBEDO_WIDTH * MOON_ALBEDO_HEIGHT);
     expect(albedo).toHaveLength(moonAlbedoManifest.byteLength);
     expect(createHash('sha256').update(albedo).digest('hex')).toBe(moonAlbedoManifest.albedoSha256);
+  });
+
+  it('matches the timestamped NASA SDO/HMI continuum artifact', () => {
+    const image = readFileSync(resolve(process.cwd(), 'src/data/sun-hmi.jpg'));
+    expect(image).toHaveLength(solarImageManifest.byteLength);
+    expect(image[0]).toBe(0xff);
+    expect(image[1]).toBe(0xd8);
+    expect(createHash('sha256').update(image).digest('hex')).toBe(solarImageManifest.sha256);
+    expect(Math.abs(Date.parse(solarImageManifest.fetchedAt) - Date.parse(solarImageManifest.observedAt))).toBeLessThan(60 * 60 * 1_000);
   });
 
   it('uses lunar-regolith scattering instead of Lambertian limb darkening', () => {
