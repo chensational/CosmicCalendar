@@ -1,8 +1,8 @@
 import {
   Body,
-  Ecliptic,
   Equator,
   EquatorFromVector,
+  GeoMoonState,
   GeoVector,
   HelioVector,
   Horizon,
@@ -37,12 +37,12 @@ import {
   magnitude,
   normalize,
   normalizeDegrees,
-  perpendicularDistanceToRay,
   radiansToDegrees,
   shortestAngularDifference,
   subtract,
 } from './math';
 import { bodyFixedEquatorialBasis } from './planetSurface';
+import { satelliteSunlightFraction, tidallyLockedBasis } from './satelliteSurface';
 import type {
   CartesianPosition,
   HorizonSnapshot,
@@ -69,6 +69,21 @@ const asCartesian = (vector: { x: number; y: number; z: number }): CartesianPosi
   y: vector.y,
   z: vector.z,
 });
+
+const EQJ_TO_ECLIPTIC = Rotation_EQJ_ECL().rot;
+
+function rotateEqjToEcliptic(value: CartesianPosition): CartesianPosition {
+  return {
+    x: EQJ_TO_ECLIPTIC[0][0] * value.x + EQJ_TO_ECLIPTIC[1][0] * value.y + EQJ_TO_ECLIPTIC[2][0] * value.z,
+    y: EQJ_TO_ECLIPTIC[0][1] * value.x + EQJ_TO_ECLIPTIC[1][1] * value.y + EQJ_TO_ECLIPTIC[2][1] * value.z,
+    z: EQJ_TO_ECLIPTIC[0][2] * value.x + EQJ_TO_ECLIPTIC[1][2] * value.y + EQJ_TO_ECLIPTIC[2][2] * value.z,
+  };
+}
+
+interface SatelliteCartesianState {
+  positionKm: CartesianPosition;
+  velocityKmPerSecond: CartesianPosition;
+}
 
 function horizontalPosition(body: Body, date: Date, observer: Observer): HorizontalPosition {
   const equatorial = Equator(body, date, observer, true, true);
@@ -269,18 +284,13 @@ export function getLunarHorizonSnapshot(date: Date): LunarHorizonSnapshot {
 
 function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetState {
   const vector = HelioVector(planet.body, date);
-  const ecliptic = Ecliptic(vector);
+  const heliocentricEclipticAu = rotateEqjToEcliptic(asCartesian(vector));
+  const distanceAu = magnitude(heliocentricEclipticAu);
   const axis = RotationAxis(planet.body, date);
   const illumination = planet.body === Body.Earth
     ? { phase_fraction: 1, phase_angle: 0, ring_tilt: undefined }
     : Illumination(planet.body, date);
   const bodyBasis = bodyFixedEquatorialBasis(axis.ra, axis.dec, axis.spin);
-  const eclipticRotation = Rotation_EQJ_ECL().rot;
-  const rotateEqjToEcliptic = (value: CartesianPosition): CartesianPosition => ({
-    x: eclipticRotation[0][0] * value.x + eclipticRotation[1][0] * value.y + eclipticRotation[2][0] * value.z,
-    y: eclipticRotation[0][1] * value.x + eclipticRotation[1][1] * value.y + eclipticRotation[2][1] * value.z,
-    z: eclipticRotation[0][2] * value.x + eclipticRotation[1][2] * value.y + eclipticRotation[2][2] * value.z,
-  });
 
   return {
     key: planet.key,
@@ -289,9 +299,17 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
     radiusKm: planet.radiusKm,
     // Preserve EQJ/ICRF orientation so satellite shadow vectors share a frame.
     heliocentricAu: asCartesian(vector),
-    distanceAu: vector.Length(),
-    eclipticLongitudeDegrees: ecliptic.elon,
-    eclipticLatitudeDegrees: ecliptic.elat,
+    heliocentricEclipticAu,
+    distanceAu,
+    eclipticLongitudeDegrees: normalizeDegrees(radiansToDegrees(Math.atan2(
+      heliocentricEclipticAu.y,
+      heliocentricEclipticAu.x,
+    ))),
+    eclipticLatitudeDegrees: radiansToDegrees(Math.asin(clamp(
+      heliocentricEclipticAu.z / distanceAu,
+      -1,
+      1,
+    ))),
     illuminatedFraction: illumination.phase_fraction,
     phaseAngleDegrees: illumination.phase_angle,
     ringTiltDegrees: illumination.ring_tilt,
@@ -321,15 +339,23 @@ function propagateJplReferenceOrbit(
   semiMajorAxisKm: number,
   periodDays: number,
   date: Date,
-): CartesianPosition {
+): SatelliteCartesianState {
   const reference = satelliteReferenceMap.get(key);
   if (!reference) {
     const elapsedDays = (date.getTime() - J2000_UNIX_MS) / 86_400_000;
     const phase = hashUnit(key) * Math.PI * 2 + elapsedDays / Math.abs(periodDays) * Math.PI * 2 * Math.sign(periodDays);
+    const angularRate = Math.sign(periodDays) * Math.PI * 2 / (Math.abs(periodDays) * 86_400);
     return {
-      x: Math.cos(phase) * semiMajorAxisKm,
-      y: Math.sin(phase) * semiMajorAxisKm,
-      z: 0,
+      positionKm: {
+        x: Math.cos(phase) * semiMajorAxisKm,
+        y: Math.sin(phase) * semiMajorAxisKm,
+        z: 0,
+      },
+      velocityKmPerSecond: {
+        x: -Math.sin(phase) * semiMajorAxisKm * angularRate,
+        y: Math.cos(phase) * semiMajorAxisKm * angularRate,
+        z: 0,
+      },
     };
   }
 
@@ -364,56 +390,67 @@ function propagateJplReferenceOrbit(
   const z = alpha * anomaly ** 2;
   const f = 1 - anomaly ** 2 / radius * stumpffC(z);
   const g = elapsedSeconds - anomaly ** 3 / squareRootMu * stumpffS(z);
-  return {
+  const positionKm = {
     x: f * initialPosition.x + g * initialVelocity.x,
     y: f * initialPosition.y + g * initialVelocity.y,
     z: f * initialPosition.z + g * initialVelocity.z,
   };
-}
-
-function getJupiterSatellitePositions(date: Date): Readonly<Record<string, CartesianPosition>> {
-  const moons = JupiterMoons(date);
+  const finalRadius = magnitude(positionKm);
+  const fDot = squareRootMu / (radius * finalRadius) *
+    (alpha * anomaly ** 3 * stumpffS(z) - anomaly);
+  const gDot = 1 - anomaly ** 2 / finalRadius * stumpffC(z);
   return {
-    io: { x: moons.io.x * AU_KM, y: moons.io.y * AU_KM, z: moons.io.z * AU_KM },
-    europa: { x: moons.europa.x * AU_KM, y: moons.europa.y * AU_KM, z: moons.europa.z * AU_KM },
-    ganymede: { x: moons.ganymede.x * AU_KM, y: moons.ganymede.y * AU_KM, z: moons.ganymede.z * AU_KM },
-    callisto: { x: moons.callisto.x * AU_KM, y: moons.callisto.y * AU_KM, z: moons.callisto.z * AU_KM },
+    positionKm,
+    velocityKmPerSecond: {
+      x: fDot * initialPosition.x + gDot * initialVelocity.x,
+      y: fDot * initialPosition.y + gDot * initialVelocity.y,
+      z: fDot * initialPosition.z + gDot * initialVelocity.z,
+    },
   };
 }
 
-function isSatelliteSunlit(
-  relativePositionKm: CartesianPosition,
-  parentHeliocentricAu: CartesianPosition,
-  parentRadiusKm: number,
-): boolean {
-  const antiSunDirection = normalize(parentHeliocentricAu);
-  const isBehindParent = dot(relativePositionKm, antiSunDirection) > 0;
-  if (!isBehindParent) return true;
-  return perpendicularDistanceToRay(relativePositionKm, antiSunDirection) > parentRadiusKm;
+function getIntegratedSatelliteStates(date: Date): Readonly<Record<string, SatelliteCartesianState>> {
+  const moons = JupiterMoons(date);
+  const moon = GeoMoonState(date);
+  const convertState = (state: { x: number; y: number; z: number; vx: number; vy: number; vz: number }) => ({
+    positionKm: { x: state.x * AU_KM, y: state.y * AU_KM, z: state.z * AU_KM },
+    velocityKmPerSecond: {
+      x: state.vx * AU_KM / 86_400,
+      y: state.vy * AU_KM / 86_400,
+      z: state.vz * AU_KM / 86_400,
+    },
+  });
+  return {
+    moon: convertState(moon),
+    io: convertState(moons.io),
+    europa: convertState(moons.europa),
+    ganymede: convertState(moons.ganymede),
+    callisto: convertState(moons.callisto),
+  };
 }
 
 function getSatelliteStates(date: Date, planets: PlanetState[]): SatelliteState[] {
   const parentMap = new Map(planets.map((planet) => [planet.key, planet]));
-  const jupiterPositions = getJupiterSatellitePositions(date);
-  const moonVector = HelioVector(Body.Moon, date);
-  const earthVector = HelioVector(Body.Earth, date);
-  const exactMoonPosition = {
-    x: (moonVector.x - earthVector.x) * AU_KM,
-    y: (moonVector.y - earthVector.y) * AU_KM,
-    z: (moonVector.z - earthVector.z) * AU_KM,
-  };
+  const integratedStates = getIntegratedSatelliteStates(date);
 
   return MAJOR_SATELLITES.map((satellite) => {
     const parent = parentMap.get(satellite.parent);
-    const exact = satellite.key === 'moon'
-      ? exactMoonPosition
-      : jupiterPositions[satellite.key];
-    const relativePositionKm = exact ?? propagateJplReferenceOrbit(
+    const integrated = integratedStates[satellite.key];
+    const state = integrated ?? propagateJplReferenceOrbit(
       satellite.key,
       satellite.semiMajorAxisKm,
       satellite.periodDays,
       date,
     );
+    const relativePositionKm = state.positionKm;
+    const bodyBasis = tidallyLockedBasis(relativePositionKm, state.velocityKmPerSecond);
+    const sunlightFraction = parent
+      ? satelliteSunlightFraction(
+        relativePositionKm,
+        parent.heliocentricAu,
+        PARENT_RADIUS_KM[satellite.parent] ?? 0,
+      )
+      : 1;
     const phase = satellite.key === 'moon'
       ? (1 - Math.cos(degreesToRadians(MoonPhase(date)))) / 2
       : parent?.illuminatedFraction ?? 1;
@@ -425,11 +462,15 @@ function getSatelliteStates(date: Date, planets: PlanetState[]): SatelliteState[
       radiusKm: satellite.radiusKm,
       semiMajorAxisKm: satellite.semiMajorAxisKm,
       relativePositionKm,
+      relativeVelocityKmPerSecond: state.velocityKmPerSecond,
+      relativePositionEclipticKm: rotateEqjToEcliptic(relativePositionKm),
       illuminatedFraction: phase,
-      sunlit: parent
-        ? isSatelliteSunlit(relativePositionKm, parent.heliocentricAu, PARENT_RADIUS_KM[satellite.parent] ?? 0)
-        : true,
-      model: exact ? 'integrated' : 'jpl-reference-kepler',
+      sunlightFraction,
+      sunlit: sunlightFraction > 0.001,
+      axisNorthEcliptic: rotateEqjToEcliptic(bodyBasis.north),
+      primeMeridianEcliptic: rotateEqjToEcliptic(bodyBasis.meridian),
+      eastEcliptic: rotateEqjToEcliptic(bodyBasis.east),
+      model: integrated ? 'integrated' : 'jpl-reference-kepler',
     };
   });
 }

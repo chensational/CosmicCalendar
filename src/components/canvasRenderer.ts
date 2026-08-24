@@ -1,4 +1,5 @@
 import {
+  AU_KM,
   GALACTIC_CENTER_DISTANCE_KPC,
   SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS,
   SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC,
@@ -11,7 +12,7 @@ import {
   sampleLunarAlbedo,
   visibleLunarNormalToBody,
 } from '../core/lunarSurface';
-import { eclipticSphericalToCartesian, orbitalPositionAtTrueAnomaly } from '../core/orbits';
+import { orbitalPositionAtTrueAnomaly } from '../core/orbits';
 import {
   lambertianLight,
   rotateEquatorialBasis,
@@ -594,6 +595,10 @@ function planetRadius(radiusKm: number): number {
   return clamp(2.4 + Math.log10(radiusKm / 700 + 1) * 3.8, 2.6, 14);
 }
 
+function satelliteRadius(radiusKm: number): number {
+  return clamp(1.25 + Math.log10(radiusKm / 5 + 1) * 0.65, 1.4, 3.1);
+}
+
 function projectSolarVector(
   vector: CartesianPosition,
   centerX: number,
@@ -602,12 +607,10 @@ function projectSolarVector(
 ) {
   const distance = Math.hypot(vector.x, vector.y, vector.z) || 1;
   const radius = orbitScale(distance);
-  const cameraRotation = -0.12;
-  const rotatedX = vector.x * Math.cos(cameraRotation) - vector.y * Math.sin(cameraRotation);
-  const rotatedY = vector.x * Math.sin(cameraRotation) + vector.y * Math.cos(cameraRotation);
+  const projected = toSolarView(vector);
   return {
-    x: centerX + rotatedX / distance * radius,
-    y: centerY + (rotatedY * 0.48 - vector.z * 0.72) / distance * radius,
+    x: centerX + projected.x / distance * radius,
+    y: centerY + projected.y / distance * radius,
   };
 }
 
@@ -646,7 +649,13 @@ function solarOrbitPaths(
 }
 
 type PlanetState = SolarSystemSnapshot['planets'][number];
+type SatelliteState = SolarSystemSnapshot['satellites'][number];
 type RGB = readonly [number, number, number];
+
+interface SurfaceBody {
+  key: string;
+  name: string;
+}
 
 interface PlanetViewFrame {
   pole: CartesianPosition;
@@ -655,7 +664,7 @@ interface PlanetViewFrame {
   light: CartesianPosition;
 }
 
-const planetTextureCache = new Map<string, SurfaceCanvas>();
+const bodyTextureCache = new Map<string, SurfaceCanvas>();
 
 function angularGaussian(
   longitude: number,
@@ -689,6 +698,85 @@ function surfaceMaterial(name: string, latitude: number, longitude: number): { c
     Math.sin(longitude * 11 - latitude * 7) * 0.45 +
     Math.cos(longitude * 17 + latitude * 13) * 0.2
   ) / 1.65;
+
+  if (name === 'Moon') {
+    const albedo = sampleLunarAlbedo(longitude, latitude);
+    return { color: [albedo * 257, albedo * 252, albedo * 241], specular: 0.004 };
+  }
+  if (name === 'Phobos' || name === 'Deimos') {
+    const craterField = 0.5 + 0.5 * Math.sin(longitude * 17 + latitude * 13) *
+      Math.cos(longitude * 9 - latitude * 19);
+    const base: RGB = name === 'Phobos' ? [91, 75, 62] : [145, 126, 103];
+    return { color: blendColor(base, [53, 47, 42], craterField * 0.42 + textureNoise * 0.12), specular: 0.004 };
+  }
+  if (name === 'Io') {
+    let color = blendColor([224, 194, 82], [246, 227, 156], 0.35 + textureNoise * 0.18);
+    const sulfur = Math.max(
+      angularGaussian(longitude, latitude, -1.15, 0.35, 0.32, 0.24),
+      angularGaussian(longitude, latitude, 1.65, -0.28, 0.26, 0.2),
+    );
+    color = blendColor(color, [142, 57, 28], sulfur * 0.9);
+    return { color, specular: 0.012 };
+  }
+  if (name === 'Europa') {
+    const lineament = Math.exp(-Math.abs(Math.sin(
+      longitude * 4.5 + latitude * 7 + Math.sin(longitude * 2) * 1.3,
+    )) * 11);
+    const color = blendColor([215, 210, 183], [126, 75, 57], lineament * 0.72 + Math.max(0, textureNoise) * 0.08);
+    return { color, specular: 0.04 };
+  }
+  if (name === 'Ganymede') {
+    const groovedTerrain = smoothstep(-0.35, 0.5, textureNoise + Math.sin(longitude * 3 - latitude * 5) * 0.24);
+    return { color: blendColor([99, 83, 73], [181, 168, 143], groovedTerrain), specular: 0.012 };
+  }
+  if (name === 'Callisto') {
+    const brightCrater = smoothstep(0.7, 0.96,
+      0.5 + 0.5 * Math.sin(longitude * 23) * Math.cos(latitude * 19));
+    return { color: blendColor([66, 58, 52], [190, 181, 159], brightCrater * 0.72 + Math.max(0, textureNoise) * 0.12), specular: 0.008 };
+  }
+  if (name === 'Mimas') {
+    const herschel = angularGaussian(longitude, latitude, 0, 0.12, 0.3, 0.3);
+    return { color: blendColor([190, 190, 184], [75, 76, 77], herschel * 0.72 + textureNoise * 0.1), specular: 0.02 };
+  }
+  if (name === 'Enceladus') {
+    const tigerStripes = latitude < -0.75
+      ? Math.exp(-Math.abs(Math.sin(longitude * 8 + latitude * 3)) * 8)
+      : 0;
+    return { color: blendColor([239, 247, 249], [112, 161, 190], tigerStripes * 0.55), specular: 0.09 };
+  }
+  if (name === 'Tethys' || name === 'Dione' || name === 'Rhea') {
+    const cratered = smoothstep(-0.45, 0.55, textureNoise);
+    const base: RGB = name === 'Dione' ? [197, 202, 203] : name === 'Rhea' ? [172, 176, 177] : [208, 211, 207];
+    return { color: blendColor(base, [108, 112, 114], cratered * 0.38), specular: 0.025 };
+  }
+  if (name === 'Titan') {
+    const hazeBand = 0.5 + 0.5 * Math.sin(latitude * 7 + textureNoise * 0.18);
+    return { color: blendColor([218, 157, 72], [142, 81, 36], hazeBand * 0.28), specular: 0.025 };
+  }
+  if (name === 'Iapetus') {
+    const leadingHemisphere = smoothstep(-0.28, 0.28, -Math.sin(longitude));
+    let color = blendColor([208, 200, 177], [48, 39, 34], leadingHemisphere * 0.93);
+    color = blendColor(color, [126, 102, 82], Math.max(0, textureNoise) * 0.12);
+    return { color, specular: 0.006 };
+  }
+  if (name === 'Ariel' || name === 'Titania' || name === 'Oberon') {
+    const faulted = smoothstep(-0.5, 0.6, textureNoise + Math.sin(longitude * 8 + latitude * 5) * 0.18);
+    const base: RGB = name === 'Ariel' ? [194, 203, 203] : name === 'Titania' ? [154, 156, 151] : [131, 126, 121];
+    return { color: blendColor(base, [91, 91, 89], faulted * 0.35), specular: 0.02 };
+  }
+  if (name === 'Umbriel') {
+    return { color: blendColor([83, 82, 80], [130, 132, 129], Math.max(0, textureNoise) * 0.22), specular: 0.008 };
+  }
+  if (name === 'Triton') {
+    const nitrogenCap = smoothstep(-0.15, -0.85, sinLatitude);
+    let color = blendColor([181, 142, 137], [224, 211, 204], nitrogenCap);
+    color = blendColor(color, [101, 78, 75], Math.max(0, textureNoise) * 0.14);
+    return { color, specular: 0.025 };
+  }
+  if (name === 'Charon') {
+    const mordor = smoothstep(0.78, 1.18, latitude);
+    return { color: blendColor([147, 143, 137], [74, 45, 42], mordor * 0.82 + textureNoise * 0.08), specular: 0.01 };
+  }
 
   if (name === 'Earth') {
     const americas = Math.max(
@@ -780,21 +868,32 @@ function planetViewFrame(
   };
 }
 
-function planetTextureKey(planet: PlanetState, radius: number, frame: PlanetViewFrame): string {
+function bodyTextureKey(
+  body: SurfaceBody,
+  radius: number,
+  frame: PlanetViewFrame,
+  sunlightFraction: number,
+): string {
   const quantizeVector = (vector: CartesianPosition) =>
     [vector.x, vector.y, vector.z].map((value) => Math.round(value * 72)).join(',');
   return [
-    planet.key,
+    body.key,
     Math.round(radius * 4),
     quantizeVector(frame.pole),
     quantizeVector(frame.meridian),
     quantizeVector(frame.light),
+    Math.round(sunlightFraction * 24),
   ].join(':');
 }
 
-function renderPlanetTexture(planet: PlanetState, radius: number, frame: PlanetViewFrame): SurfaceCanvas {
-  const cacheKey = planetTextureKey(planet, radius, frame);
-  const cached = planetTextureCache.get(cacheKey);
+function renderBodyTexture(
+  body: SurfaceBody,
+  radius: number,
+  frame: PlanetViewFrame,
+  sunlightFraction = 1,
+): SurfaceCanvas {
+  const cacheKey = bodyTextureKey(body, radius, frame, sunlightFraction);
+  const cached = bodyTextureCache.get(cacheKey);
   if (cached) return cached;
   const size = Math.max(12, Math.ceil(radius * 4));
   const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
@@ -824,11 +923,12 @@ function renderPlanetTexture(planet: PlanetState, radius: number, frame: PlanetV
         frame.meridian,
         frame.east,
       );
-      const material = surfaceMaterial(planet.name, latitudeRadians, longitudeRadians);
+      const material = surfaceMaterial(body.name, latitudeRadians, longitudeRadians);
       const limbResponse = 0.66 + normal.z * 0.34;
-      const illumination = lambertianLight(normal, frame.light) * limbResponse;
+      const fullIllumination = lambertianLight(normal, frame.light);
+      const illumination = (0.025 + (fullIllumination - 0.025) * sunlightFraction) * limbResponse;
       const specular = material.specular * Math.max(0, dot(normal, frame.light)) *
-        Math.max(0, dot(normal, halfLight)) ** 28;
+        Math.max(0, dot(normal, halfLight)) ** 28 * sunlightFraction;
       const index = (pixelY * size + pixelX) * 4;
       for (let channel = 0; channel < 3; channel += 1) {
         const linearAlbedo = (material.color[channel] / 255) ** 2.2;
@@ -840,10 +940,10 @@ function renderPlanetTexture(planet: PlanetState, radius: number, frame: PlanetV
     }
   }
   surfaceContext.putImageData(image, 0, 0);
-  planetTextureCache.set(cacheKey, surface);
-  if (planetTextureCache.size > 128) {
-    const oldest = planetTextureCache.keys().next().value;
-    if (oldest) planetTextureCache.delete(oldest);
+  bodyTextureCache.set(cacheKey, surface);
+  if (bodyTextureCache.size > 256) {
+    const oldest = bodyTextureCache.keys().next().value;
+    if (oldest) bodyTextureCache.delete(oldest);
   }
   return surface;
 }
@@ -856,7 +956,7 @@ function drawPlanetSphere(
   planet: PlanetState,
   frame: PlanetViewFrame,
 ) {
-  const texture = renderPlanetTexture(planet, radius, frame);
+  const texture = renderBodyTexture(planet, radius, frame);
   context.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
   const atmosphereColor = planet.name === 'Earth'
     ? 'rgba(112, 187, 255, .65)'
@@ -867,6 +967,48 @@ function drawPlanetSphere(
         : 'rgba(255,255,255,.2)';
   context.strokeStyle = atmosphereColor;
   context.lineWidth = planet.name === 'Earth' || planet.name === 'Venus' ? 1.15 : 0.7;
+  context.beginPath();
+  context.arc(x, y, radius, 0, TAU);
+  context.stroke();
+}
+
+function satelliteViewFrame(
+  satellite: SatelliteState,
+  parentEclipticPositionAu: CartesianPosition,
+): PlanetViewFrame {
+  const heliocentricPosition = {
+    x: parentEclipticPositionAu.x + satellite.relativePositionEclipticKm.x / AU_KM,
+    y: parentEclipticPositionAu.y + satellite.relativePositionEclipticKm.y / AU_KM,
+    z: parentEclipticPositionAu.z + satellite.relativePositionEclipticKm.z / AU_KM,
+  };
+  return {
+    pole: normalize(toSolarView(satellite.axisNorthEcliptic)),
+    meridian: normalize(toSolarView(satellite.primeMeridianEcliptic)),
+    east: normalize(toSolarView(satellite.eastEcliptic)),
+    light: normalize(toSolarView({
+      x: -heliocentricPosition.x,
+      y: -heliocentricPosition.y,
+      z: -heliocentricPosition.z,
+    })),
+  };
+}
+
+function drawSatelliteSphere(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  satellite: SatelliteState,
+  frame: PlanetViewFrame,
+) {
+  const texture = renderBodyTexture(satellite, radius, frame, satellite.sunlightFraction);
+  context.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
+  context.strokeStyle = satellite.name === 'Titan'
+    ? 'rgba(222, 164, 80, .72)'
+    : satellite.name === 'Enceladus' || satellite.name === 'Europa'
+      ? 'rgba(210, 232, 241, .48)'
+      : 'rgba(226, 232, 238, .3)';
+  context.lineWidth = satellite.name === 'Titan' ? 0.72 : 0.45;
   context.beginPath();
   context.arc(x, y, radius, 0, TAU);
   context.stroke();
@@ -923,7 +1065,12 @@ function drawSolarScene(frame: CanvasFrame) {
   const orbitScale = (distanceAu: number) => 35 + Math.log1p(distanceAu) / Math.log(41) * (maxOrbit - 35);
   const orbitPaths = solarOrbitPaths(solar.planets, width, height, centerX, centerY, orbitScale);
 
-  const planetScreen = new Map<string, { x: number; y: number; radius: number }>();
+  const planetScreen = new Map<string, {
+    x: number;
+    y: number;
+    radius: number;
+    eclipticPosition: CartesianPosition;
+  }>();
   solar.planets.forEach((planet) => {
     context.strokeStyle = planet.key === 'mercury' ? 'rgba(230, 193, 143, .34)' : 'rgba(184, 200, 229, .12)';
     context.lineWidth = planet.key === 'mercury' ? 1.2 : 0.8;
@@ -942,11 +1089,7 @@ function drawSolarScene(frame: CanvasFrame) {
   context.fill();
 
   solar.planets.forEach((planet) => {
-    const eclipticPosition = eclipticSphericalToCartesian(
-      planet.distanceAu,
-      planet.eclipticLongitudeDegrees,
-      planet.eclipticLatitudeDegrees,
-    );
+    const eclipticPosition = planet.heliocentricEclipticAu;
     const projected = projectSolarVector(eclipticPosition, centerX, centerY, orbitScale);
     const { x, y } = projected;
     const radius = planetRadius(planet.radiusKm);
@@ -958,7 +1101,7 @@ function drawSolarScene(frame: CanvasFrame) {
     if (planet.name === 'Saturn') {
       drawSaturnRingHalf(context, x, y, radius, viewFrame.pole, true);
     }
-    planetScreen.set(planet.key, { x, y, radius });
+    planetScreen.set(planet.key, { x, y, radius, eclipticPosition });
     context.fillStyle = 'rgba(231, 237, 249, .82)';
     context.font = '500 9px ui-monospace, SFMono-Regular, Menlo, monospace';
     context.fillText(planet.name.toUpperCase(), x + radius + 4, y - radius);
@@ -967,21 +1110,14 @@ function drawSolarScene(frame: CanvasFrame) {
   solar.satellites.forEach((satellite) => {
     const parent = planetScreen.get(satellite.parent);
     if (!parent) return;
-    const vectorLength = Math.hypot(
-      satellite.relativePositionKm.x,
-      satellite.relativePositionKm.y,
-      satellite.relativePositionKm.z,
-    ) || 1;
+    const relativeView = toSolarView(satellite.relativePositionEclipticKm);
+    const vectorLength = Math.hypot(relativeView.x, relativeView.y, relativeView.z) || 1;
     const localRadius = parent.radius + 4 + Math.log10(satellite.semiMajorAxisKm / 8_000 + 1) * 2.6;
-    const satelliteX = parent.x + satellite.relativePositionKm.x / vectorLength * localRadius;
-    const satelliteY = parent.y + (
-      satellite.relativePositionKm.y * 0.58 - satellite.relativePositionKm.z * 0.4
-    ) / vectorLength * localRadius;
-    const dotRadius = clamp(0.85 + Math.log10(satellite.radiusKm / 5 + 1) * 0.32, 0.9, 2.1);
-    context.fillStyle = satellite.sunlit ? '#dde8f5' : '#263044';
-    context.beginPath();
-    context.arc(satelliteX, satelliteY, dotRadius, 0, TAU);
-    context.fill();
+    const satelliteX = parent.x + relativeView.x / vectorLength * localRadius;
+    const satelliteY = parent.y + relativeView.y / vectorLength * localRadius;
+    const radius = satelliteRadius(satellite.radiusKm);
+    const viewFrame = satelliteViewFrame(satellite, parent.eclipticPosition);
+    drawSatelliteSphere(context, satelliteX, satelliteY, radius, satellite, viewFrame);
   });
 
   const mercury = solar.planets[0];
@@ -996,14 +1132,26 @@ function drawSolarScene(frame: CanvasFrame) {
   context.stroke();
   context.restore();
 
-  const sunlit = solar.satellites.filter((satellite) => satellite.sunlit).length;
-  roundedRect(context, 18, height - 64, Math.min(326, width - 36), 44, 11);
+  const fullSun = solar.satellites.filter((satellite) => satellite.sunlightFraction >= 0.999).length;
+  const penumbra = solar.satellites.filter((satellite) =>
+    satellite.sunlightFraction > 0.001 && satellite.sunlightFraction < 0.999).length;
+  const umbra = solar.satellites.length - fullSun - penumbra;
+  roundedRect(context, 18, height - 122, Math.min(326, width - 36), 66, 11);
   context.fillStyle = 'rgba(4, 7, 18, .74)';
   context.fill();
   context.fillStyle = '#aab9cf';
   context.font = '500 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-  context.fillText(`${solar.satellites.length} MAJOR SATELLITES · ${sunlit} SUNLIT · LOCAL ORBITS EXAGGERATED`, 30, height - 40);
-  context.fillText(`MERCURY GR EXCESS · ${solar.mercuryRelativisticPrecessionArcsecondsPerCentury.toFixed(2)}″ / CENTURY`, 30, height - 25);
+  context.fillText(
+    `${solar.satellites.length} MAJOR SATELLITES · LOCAL SCALE EXAGGERATED`,
+    30,
+    height - 99,
+  );
+  context.fillText(
+    `${fullSun} FULL SUN · ${penumbra} PENUMBRA · ${umbra} UMBRA`,
+    30,
+    height - 82,
+  );
+  context.fillText(`MERCURY GR EXCESS · ${solar.mercuryRelativisticPrecessionArcsecondsPerCentury.toFixed(2)}″ / CENTURY`, 30, height - 65);
 }
 
 function drawGalaxyScene(frame: CanvasFrame) {

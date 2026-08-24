@@ -13,7 +13,7 @@
 
 - **Local horizon:** the real-time Sun, libration-oriented LRO lunar surface, Galactic core, sampled Milky Way plane, and all 9,096 Bright Star Catalogue entries projected for a device or manually entered location, including proper motion, precession, refraction, extinction, B−V color, and altitude-sensitive scintillation.
 - **Tranquility Base:** Earth positioned and phased above the Apollo 11 landing-site horizon using the topocentric lunar body frame.
-- **Solar System:** all planets and 20 major satellites, cached spherical Lambertian surfaces, IAU pole/prime-meridian rotation, physically projected Saturn rings, eclipse state, and Mercury perihelion precession.
+- **Solar System:** all planets and 20 major satellites as cached physically lit spheres, IAU/tidally locked surface orientation, finite-Sun umbra/penumbra state, physically projected Saturn rings, and Mercury perihelion precession.
 - **Galactic scale:** the Sun at the measured Galactic radius and height, with a modeled orbit/vertical-oscillation trail from Solar birth.
 - **Cosmic scale:** a Laniākea velocity-flow visualization with a logarithmic timeline from inflation to an explicitly hypothetical heat-death horizon.
 - **Calendar:** a six-week civil month with calculated lunar illumination for every day.
@@ -102,7 +102,7 @@ See [Scientific method and source ledger](docs/SCIENTIFIC_METHOD.md) for constan
 - `ResizeObserver` and `IntersectionObserver` pause work offscreen.
 - No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The 8 KiB lunar albedo map is embedded; the demo loads one same-origin static star-catalog binary.
 - Browser coordinates remain in local storage. Apple coordinates remain in the signed app group's `UserDefaults`.
-- Production React library (including exported CosmicWatermark): approximately **73.1 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
+- Production React library (including exported CosmicWatermark): approximately **74.6 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
 
 More detail: [Performance architecture](docs/PERFORMANCE.md).
 

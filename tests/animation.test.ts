@@ -23,6 +23,11 @@ import {
   sphereCoordinates,
   toSolarView,
 } from '../src/core/planetSurface';
+import {
+  satelliteSunlightFraction,
+  tidallyLockedBasis,
+  visibleDiscFraction,
+} from '../src/core/satelliteSurface';
 
 describe('physically coherent animation geometry', () => {
   it('draws eccentric orbit guides with the Sun at a focus', () => {
@@ -135,5 +140,35 @@ describe('physically coherent animation geometry', () => {
     const fullMoonLight = { x: 0, y: 0, z: 1 };
     expect(lunarReflectance(limbNormal, fullMoonLight)).toBeGreaterThan(0.85);
     expect(lunarReflectance({ x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 })).toBeCloseTo(0.018, 12);
+  });
+
+  it('resolves umbra, penumbra, and annular transit from finite angular discs', () => {
+    expect(visibleDiscFraction(1, 2, 0)).toBe(0);
+    expect(visibleDiscFraction(1, 0.25, 0)).toBeCloseTo(0.9375, 12);
+    expect(visibleDiscFraction(1, 1, 2)).toBe(1);
+    expect(visibleDiscFraction(1, 1, 1)).toBeGreaterThan(0);
+    expect(visibleDiscFraction(1, 1, 1)).toBeLessThan(1);
+
+    const parentAtOneAu = { x: 1, y: 0, z: 0 };
+    expect(satelliteSunlightFraction({ x: 384_400, y: 0, z: 0 }, parentAtOneAu, 6_378.137)).toBe(0);
+    expect(satelliteSunlightFraction({ x: -384_400, y: 0, z: 0 }, parentAtOneAu, 6_378.137)).toBe(1);
+    const penumbra = satelliteSunlightFraction(
+      { x: 384_400, y: 4_700, z: 0 },
+      parentAtOneAu,
+      6_378.137,
+    );
+    expect(penumbra).toBeGreaterThan(0);
+    expect(penumbra).toBeLessThan(1);
+  });
+
+  it('keeps a synchronous satellite meridian pointed toward its parent', () => {
+    const basis = tidallyLockedBasis(
+      { x: 10, y: 0, z: 0 },
+      { x: 0, y: 2, z: 0 },
+    );
+    expect(basis.meridian.x).toBeCloseTo(-1, 12);
+    expect(basis.north.z).toBeCloseTo(1, 12);
+    expect(basis.east.y).toBeCloseTo(-1, 12);
+    expect(basis.north.x * basis.meridian.x + basis.north.y * basis.meridian.y + basis.north.z * basis.meridian.z).toBeCloseTo(0, 12);
   });
 });

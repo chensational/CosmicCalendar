@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildCalendarMonth } from '../src/core/calendar';
 import { DEFAULT_LOCATION } from '../src/core/constants';
+import satelliteReference from '../src/data/satellite-reference.json';
 import { getDistanceMetrics, earthParallelRadiusKm, earthSurfaceRotationSpeedKmPerSecond } from '../src/core/distances';
 import {
   getHorizonSnapshot,
@@ -86,6 +87,11 @@ describe('solar-system model', () => {
     expect(snapshot.planets.every((planet) => Number.isFinite(planet.rotationPeriodHours))).toBe(true);
     expect(snapshot.planets.find((planet) => planet.key === 'mercury')?.orbit.eccentricity).toBeGreaterThan(0.2);
     for (const planet of snapshot.planets) {
+      expect(Math.hypot(
+        planet.heliocentricEclipticAu.x,
+        planet.heliocentricEclipticAu.y,
+        planet.heliocentricEclipticAu.z,
+      )).toBeCloseTo(planet.distanceAu, 12);
       const northLength = Math.hypot(
         planet.axisNorthEcliptic.x,
         planet.axisNorthEcliptic.y,
@@ -111,6 +117,63 @@ describe('solar-system model', () => {
     const callisto = snapshot.satellites.find((satellite) => satellite.key === 'callisto')!;
     expect(satelliteDistanceFromParent(callisto)).toBeCloseTo(callisto.semiMajorAxisKm, -4);
     expect(typeof callisto.sunlit).toBe('boolean');
+    for (const satellite of snapshot.satellites) {
+      expect(satellite.sunlightFraction).toBeGreaterThanOrEqual(0);
+      expect(satellite.sunlightFraction).toBeLessThanOrEqual(1);
+      expect(Math.hypot(
+        satellite.relativePositionEclipticKm.x,
+        satellite.relativePositionEclipticKm.y,
+        satellite.relativePositionEclipticKm.z,
+      )).toBeCloseTo(satelliteDistanceFromParent(satellite), 6);
+      expect(Math.hypot(
+        satellite.axisNorthEcliptic.x,
+        satellite.axisNorthEcliptic.y,
+        satellite.axisNorthEcliptic.z,
+      )).toBeCloseTo(1, 10);
+      const meridianDotPole =
+        satellite.primeMeridianEcliptic.x * satellite.axisNorthEcliptic.x +
+        satellite.primeMeridianEcliptic.y * satellite.axisNorthEcliptic.y +
+        satellite.primeMeridianEcliptic.z * satellite.axisNorthEcliptic.z;
+      expect(meridianDotPole).toBeCloseTo(0, 10);
+      const positionLength = satelliteDistanceFromParent(satellite);
+      const meridianTowardParent =
+        satellite.primeMeridianEcliptic.x * satellite.relativePositionEclipticKm.x / positionLength +
+        satellite.primeMeridianEcliptic.y * satellite.relativePositionEclipticKm.y / positionLength +
+        satellite.primeMeridianEcliptic.z * satellite.relativePositionEclipticKm.z / positionLength;
+      expect(meridianTowardParent).toBeCloseTo(-1, 10);
+    }
+  });
+
+  it('returns satellite velocities consistent with the propagated positions', () => {
+    const date = new Date('2026-08-23T00:00:00Z');
+    const current = getSolarSystemSnapshot(date);
+    const nextSecond = getSolarSystemSnapshot(new Date(date.getTime() + 1_000));
+    for (const satellite of current.satellites) {
+      const future = nextSecond.satellites.find((candidate) => candidate.key === satellite.key)!;
+      const predictionErrorKm = Math.hypot(
+        future.relativePositionKm.x -
+          (satellite.relativePositionKm.x + satellite.relativeVelocityKmPerSecond.x),
+        future.relativePositionKm.y -
+          (satellite.relativePositionKm.y + satellite.relativeVelocityKmPerSecond.y),
+        future.relativePositionKm.z -
+          (satellite.relativePositionKm.z + satellite.relativeVelocityKmPerSecond.z),
+      );
+      expect(predictionErrorKm).toBeLessThan(0.05);
+    }
+  });
+
+  it('preserves every pinned JPL state at the propagation epoch', () => {
+    const snapshot = getSolarSystemSnapshot(new Date(satelliteReference.referenceDate));
+    for (const reference of satelliteReference.entries) {
+      const satellite = snapshot.satellites.find((candidate) => candidate.key === reference.key)!;
+      if (satellite.model === 'integrated') continue;
+      expect(satellite.relativePositionKm.x).toBeCloseTo(reference.positionKm.x, 6);
+      expect(satellite.relativePositionKm.y).toBeCloseTo(reference.positionKm.y, 6);
+      expect(satellite.relativePositionKm.z).toBeCloseTo(reference.positionKm.z, 6);
+      expect(satellite.relativeVelocityKmPerSecond.x).toBeCloseTo(reference.velocityKmPerSecond.x, 10);
+      expect(satellite.relativeVelocityKmPerSecond.y).toBeCloseTo(reference.velocityKmPerSecond.y, 10);
+      expect(satellite.relativeVelocityKmPerSecond.z).toBeCloseTo(reference.velocityKmPerSecond.z, 10);
+    }
   });
 
   it('advances Mercury perihelion using the JPL fitted secular rate', () => {

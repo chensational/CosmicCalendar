@@ -83,6 +83,7 @@ export interface PlanetState {
   color: string;
   radiusKm: number;
   heliocentricAu: CartesianPosition;
+  heliocentricEclipticAu: CartesianPosition;
   distanceAu: number;
   eclipticLongitudeDegrees: number;
   eclipticLatitudeDegrees: number;
@@ -104,8 +105,14 @@ export interface SatelliteState {
   radiusKm: number;
   semiMajorAxisKm: number;
   relativePositionKm: CartesianPosition;
+  relativeVelocityKmPerSecond: CartesianPosition;
+  relativePositionEclipticKm: CartesianPosition;
   illuminatedFraction: number;
+  sunlightFraction: number;
   sunlit: boolean;
+  axisNorthEcliptic: CartesianPosition;
+  primeMeridianEcliptic: CartesianPosition;
+  eastEcliptic: CartesianPosition;
   model: 'integrated' | 'jpl-reference-kepler';
 }
 
