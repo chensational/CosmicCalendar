@@ -36,7 +36,8 @@ If location is denied or the app has never run, Madison, Wisconsin is the transp
 
 ## Widget families
 
-- iPhone/iPad/Mac: small, medium, large, extra-large where the OS supports it, plus accessory circular/rectangular/inline families.
+- iPhone/iPad: small, medium, large, extra-large where the OS supports it, plus accessory circular/rectangular/inline families.
+- Mac: small, medium, large, and extra-large Desktop/Notification Center families where supported.
 - Apple Watch: accessory circular, rectangular, and inline families for complications and Smart Stack.
 - visionOS: system small through extra-large.
 

@@ -51,6 +51,7 @@ struct CosmicWidgetView: View {
             ContainerRelativeShape().fill(
                 LinearGradient(colors: [Color(red: 0.04, green: 0.08, blue: 0.16), .black], startPoint: .topLeading, endPoint: .bottomTrailing)
             )
+            #if os(watchOS) || os(iOS)
             if family == .accessoryCircular {
                 accessoryCircular
             } else if family == .accessoryInline {
@@ -60,6 +61,9 @@ struct CosmicWidgetView: View {
             } else {
                 systemWidget
             }
+            #else
+            systemWidget
+            #endif
         }
         .containerBackground(for: .widget) { Color.clear }
     }
@@ -125,10 +129,12 @@ struct CosmicCalendarWidget: Widget {
     private var supportedFamilies: [WidgetFamily] {
         #if os(watchOS)
         return [.accessoryCircular, .accessoryRectangular, .accessoryInline]
+        #elseif os(iOS)
+        return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline]
         #elseif os(visionOS)
         return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
         #else
-        return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge, .accessoryCircular, .accessoryRectangular, .accessoryInline]
+        return [.systemSmall, .systemMedium, .systemLarge, .systemExtraLarge]
         #endif
     }
 }
