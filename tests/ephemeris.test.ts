@@ -61,6 +61,25 @@ describe('solar-system model', () => {
     expect(snapshot.planets.find((planet) => planet.key === 'neptune')?.distanceAu).toBeGreaterThan(29);
     expect(snapshot.planets.every((planet) => Number.isFinite(planet.rotationPeriodHours))).toBe(true);
     expect(snapshot.planets.find((planet) => planet.key === 'mercury')?.orbit.eccentricity).toBeGreaterThan(0.2);
+    for (const planet of snapshot.planets) {
+      const northLength = Math.hypot(
+        planet.axisNorthEcliptic.x,
+        planet.axisNorthEcliptic.y,
+        planet.axisNorthEcliptic.z,
+      );
+      const meridianLength = Math.hypot(
+        planet.primeMeridianEcliptic.x,
+        planet.primeMeridianEcliptic.y,
+        planet.primeMeridianEcliptic.z,
+      );
+      const axisDotMeridian =
+        planet.axisNorthEcliptic.x * planet.primeMeridianEcliptic.x +
+        planet.axisNorthEcliptic.y * planet.primeMeridianEcliptic.y +
+        planet.axisNorthEcliptic.z * planet.primeMeridianEcliptic.z;
+      expect(northLength).toBeCloseTo(1, 10);
+      expect(meridianLength).toBeCloseTo(1, 10);
+      expect(axisDotMeridian).toBeCloseTo(0, 10);
+    }
   });
 
   it('preserves satellite orbital scales', () => {

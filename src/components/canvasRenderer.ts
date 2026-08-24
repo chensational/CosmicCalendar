@@ -4,8 +4,14 @@ import {
   SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC,
   SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS,
 } from '../core/constants';
-import { clamp, greatCircleBearingRadians, hashUnit, normalizeDegrees, smoothstep } from '../core/math';
+import { clamp, dot, greatCircleBearingRadians, hashUnit, normalize, normalizeDegrees, smoothstep } from '../core/math';
 import { eclipticSphericalToCartesian, orbitalPositionAtTrueAnomaly } from '../core/orbits';
+import {
+  lambertianLight,
+  rotateEquatorialBasis,
+  sphereCoordinates,
+  toSolarView,
+} from '../core/planetSurface';
 import type {
   CartesianPosition,
   HorizontalPosition,
@@ -525,124 +531,269 @@ function solarOrbitPaths(
   return paths;
 }
 
-function drawWrappedSpot(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  offset: number,
-  color: string,
-) {
-  for (const wrap of [-2, 0, 2]) {
-    context.fillStyle = color;
-    context.beginPath();
-    context.ellipse(x + offset + wrap * radius, y, radius * 0.32, radius * 0.2, -0.25, 0, TAU);
-    context.fill();
-  }
+type PlanetState = SolarSystemSnapshot['planets'][number];
+type SurfaceCanvas = HTMLCanvasElement | OffscreenCanvas;
+type RGB = readonly [number, number, number];
+
+interface PlanetViewFrame {
+  pole: CartesianPosition;
+  meridian: CartesianPosition;
+  east: CartesianPosition;
+  light: CartesianPosition;
 }
 
-function drawSurfaceFeatures(
-  context: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  radius: number,
-  name: string,
-  spin: number,
+const planetTextureCache = new Map<string, SurfaceCanvas>();
+
+function angularGaussian(
+  longitude: number,
+  latitude: number,
+  centerLongitude: number,
+  centerLatitude: number,
+  longitudeWidth: number,
+  latitudeWidth: number,
 ) {
-  const offset = ((spin % 360) / 360 - 0.5) * radius * 2;
-  context.save();
-  context.globalAlpha = 0.62;
+  const longitudeDelta = Math.atan2(
+    Math.sin(longitude - centerLongitude),
+    Math.cos(longitude - centerLongitude),
+  ) / longitudeWidth;
+  const latitudeDelta = (latitude - centerLatitude) / latitudeWidth;
+  return Math.exp(-0.5 * (longitudeDelta ** 2 + latitudeDelta ** 2));
+}
+
+function blendColor(first: RGB, second: RGB, amount: number): RGB {
+  const mix = clamp(amount, 0, 1);
+  return [
+    first[0] + (second[0] - first[0]) * mix,
+    first[1] + (second[1] - first[1]) * mix,
+    first[2] + (second[2] - first[2]) * mix,
+  ];
+}
+
+function surfaceMaterial(name: string, latitude: number, longitude: number): { color: RGB; specular: number } {
+  const sinLatitude = Math.sin(latitude);
+  const textureNoise = (
+    Math.sin(longitude * 5 + Math.sin(latitude * 3) * 1.7) +
+    Math.sin(longitude * 11 - latitude * 7) * 0.45 +
+    Math.cos(longitude * 17 + latitude * 13) * 0.2
+  ) / 1.65;
+
   if (name === 'Earth') {
-    drawWrappedSpot(context, x - radius * 0.2, y - radius * 0.2, radius, offset, '#75a97e');
-    drawWrappedSpot(context, x + radius * 0.25, y + radius * 0.24, radius * 0.72, offset * 0.7, '#668f68');
-    context.fillStyle = 'rgba(245,250,255,.75)';
-    context.fillRect(x - radius, y - radius, radius * 2, radius * 0.14);
-  } else if (name === 'Jupiter' || name === 'Saturn') {
-    const tones = name === 'Jupiter' ? ['#865943', '#f0d4ad', '#b77d61', '#ead0aa'] : ['#a88f60', '#eee0b7', '#bca36f'];
-    tones.forEach((tone, index) => {
-      context.fillStyle = tone;
-      context.fillRect(x - radius, y - radius + (index + 0.6) * radius * 2 / tones.length, radius * 2, radius * 0.18);
-    });
-    if (name === 'Jupiter') drawWrappedSpot(context, x, y + radius * 0.38, radius * 0.65, offset, '#9f3f2e');
-  } else if (name === 'Mars') {
-    drawWrappedSpot(context, x, y + radius * 0.05, radius, offset, '#603327');
-    context.fillStyle = '#f0ddd1';
-    context.fillRect(x - radius * 0.5, y - radius, radius, radius * 0.13);
-  } else if (name === 'Mercury') {
-    for (let index = 0; index < 7; index += 1) {
-      const angle = hashUnit(`mercury-crater-${index}`) * TAU;
-      const distance = hashUnit(`mercury-distance-${index}`) * radius * 0.7;
-      context.fillStyle = index % 2 ? '#6f6860' : '#d0c6ba';
-      context.beginPath();
-      context.arc(x + Math.cos(angle) * distance + offset * 0.2, y + Math.sin(angle) * distance, radius * 0.09, 0, TAU);
-      context.fill();
-    }
-  } else if (name === 'Venus') {
-    context.strokeStyle = '#fff0bd';
-    context.lineWidth = Math.max(0.7, radius * 0.1);
-    for (let band = -2; band <= 2; band += 1) {
-      context.beginPath();
-      context.moveTo(x - radius, y + band * radius * 0.3);
-      context.bezierCurveTo(x - radius * 0.2, y + band * radius * 0.18 + offset * 0.08, x + radius * 0.3, y + band * radius * 0.38, x + radius, y + band * radius * 0.22);
-      context.stroke();
-    }
-  } else if (name === 'Neptune' || name === 'Uranus') {
-    context.strokeStyle = name === 'Neptune' ? '#a8c4f5' : '#d7f6ef';
-    context.lineWidth = Math.max(0.6, radius * 0.08);
-    for (let band = -2; band <= 2; band += 1) {
-      context.beginPath();
-      context.moveTo(x - radius, y + band * radius * 0.3);
-      context.lineTo(x + radius, y + band * radius * 0.3);
-      context.stroke();
-    }
-    if (name === 'Neptune') drawWrappedSpot(context, x, y + radius * 0.18, radius * 0.55, offset, '#1b2d6e');
-  } else if (name === 'Pluto') {
-    drawWrappedSpot(context, x, y, radius * 0.8, offset, '#eee4d5');
+    const americas = Math.max(
+      angularGaussian(longitude, latitude, -1.75, 0.35, 0.38, 0.78),
+      angularGaussian(longitude, latitude, -1.15, -0.48, 0.28, 0.58),
+    );
+    const afroEurasia = Math.max(
+      angularGaussian(longitude, latitude, 0.35, 0.18, 0.36, 0.7),
+      angularGaussian(longitude, latitude, 1.25, 0.72, 0.92, 0.3),
+    );
+    const australia = angularGaussian(longitude, latitude, 2.35, -0.45, 0.3, 0.23);
+    const greenland = angularGaussian(longitude, latitude, -0.72, 1.18, 0.25, 0.22);
+    const land = smoothstep(0.34, 0.58, Math.max(americas, afroEurasia, australia, greenland) + textureNoise * 0.16);
+    const vegetation = smoothstep(-0.15, 0.55, Math.cos(latitude * 1.7) + textureNoise * 0.28);
+    let color = blendColor([32, 79, 139], [80, 124, 67], land * vegetation);
+    color = blendColor(color, [151, 124, 77], land * (1 - vegetation) * 0.72);
+    const polarIce = smoothstep(1.12, 1.45, Math.abs(latitude));
+    color = blendColor(color, [224, 237, 242], polarIce);
+    const clouds = smoothstep(0.58, 0.92, Math.sin(longitude * 7 + latitude * 9) * 0.5 + textureNoise * 0.36 + 0.5);
+    color = blendColor(color, [235, 241, 239], clouds * 0.5);
+    return { color, specular: (1 - land) * (1 - clouds) * 0.34 };
   }
-  context.restore();
+  if (name === 'Jupiter') {
+    const bands = 0.5 + 0.5 * Math.sin(latitude * 19 + Math.sin(latitude * 5) * 1.2 + textureNoise * 0.28);
+    let color = blendColor([224, 200, 167], [139, 91, 69], bands * 0.72);
+    const redSpot = angularGaussian(longitude, latitude, -1.05, -0.38, 0.28, 0.13);
+    color = blendColor(color, [152, 49, 35], redSpot * 0.9);
+    return { color, specular: 0.025 };
+  }
+  if (name === 'Saturn') {
+    const bands = 0.5 + 0.5 * Math.sin(latitude * 15 + textureNoise * 0.18);
+    return { color: blendColor([231, 216, 174], [169, 141, 91], bands * 0.48), specular: 0.02 };
+  }
+  if (name === 'Mars') {
+    const darkTerrain = smoothstep(-0.15, 0.42, textureNoise +
+      angularGaussian(longitude, latitude, 0.2, 0.05, 0.7, 0.38) * 0.45);
+    let color = blendColor([195, 93, 57], [87, 50, 42], darkTerrain * 0.68);
+    color = blendColor(color, [235, 226, 216], smoothstep(1.25, 1.5, Math.abs(latitude)));
+    return { color, specular: 0.01 };
+  }
+  if (name === 'Mercury') {
+    const crater = smoothstep(0.45, 0.9, Math.sin(longitude * 21) * Math.cos(latitude * 17) * 0.5 + 0.5);
+    return { color: blendColor([176, 169, 158], [93, 88, 82], crater * 0.45 + textureNoise * 0.12), specular: 0.015 };
+  }
+  if (name === 'Venus') {
+    const clouds = 0.5 + 0.5 * Math.sin(longitude * 8 + latitude * 11 + Math.sin(latitude * 4) * 1.8);
+    return { color: blendColor([239, 218, 157], [181, 132, 71], clouds * 0.48), specular: 0.08 };
+  }
+  if (name === 'Uranus') {
+    const bands = 0.5 + 0.5 * Math.sin(latitude * 12);
+    return { color: blendColor([160, 219, 219], [115, 185, 194], bands * 0.16), specular: 0.06 };
+  }
+  if (name === 'Neptune') {
+    const bands = 0.5 + 0.5 * Math.sin(latitude * 14 + textureNoise * 0.2);
+    let color = blendColor([61, 97, 191], [38, 63, 139], bands * 0.3);
+    color = blendColor(color, [24, 37, 102], angularGaussian(longitude, latitude, 0.8, -0.32, 0.32, 0.15) * 0.7);
+    return { color, specular: 0.05 };
+  }
+  if (name === 'Pluto') {
+    const heart = Math.max(
+      angularGaussian(longitude, latitude, Math.PI - 0.25, 0.25, 0.32, 0.35),
+      angularGaussian(longitude, latitude, -Math.PI + 0.25, 0.25, 0.32, 0.35),
+    );
+    return { color: blendColor([151, 119, 92], [229, 218, 196], heart * 0.9 + textureNoise * 0.12), specular: 0.01 };
+  }
+  return { color: [170, 170, 170], specular: 0.02 };
 }
 
-function drawPlanetSurface(
+function planetViewFrame(
+  planet: PlanetState,
+  eclipticPosition: CartesianPosition,
+  realtimeOffsetSeconds: number,
+): PlanetViewFrame {
+  const spinDelta = realtimeOffsetSeconds * 360 / (planet.rotationPeriodHours * 3_600);
+  const basis = rotateEquatorialBasis(
+    planet.primeMeridianEcliptic,
+    planet.eastEcliptic,
+    spinDelta,
+  );
+  return {
+    pole: normalize(toSolarView(planet.axisNorthEcliptic)),
+    meridian: normalize(toSolarView(basis.meridian)),
+    east: normalize(toSolarView(basis.east)),
+    light: normalize(toSolarView({
+      x: -eclipticPosition.x,
+      y: -eclipticPosition.y,
+      z: -eclipticPosition.z,
+    })),
+  };
+}
+
+function planetTextureKey(planet: PlanetState, radius: number, frame: PlanetViewFrame): string {
+  const quantizeVector = (vector: CartesianPosition) =>
+    [vector.x, vector.y, vector.z].map((value) => Math.round(value * 72)).join(',');
+  return [
+    planet.key,
+    Math.round(radius * 4),
+    quantizeVector(frame.pole),
+    quantizeVector(frame.meridian),
+    quantizeVector(frame.light),
+  ].join(':');
+}
+
+function renderPlanetTexture(planet: PlanetState, radius: number, frame: PlanetViewFrame): SurfaceCanvas {
+  const cacheKey = planetTextureKey(planet, radius, frame);
+  const cached = planetTextureCache.get(cacheKey);
+  if (cached) return cached;
+  const size = Math.max(12, Math.ceil(radius * 4));
+  const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(size, size)
+    : Object.assign(document.createElement('canvas'), { width: size, height: size });
+  const surfaceContext = surface.getContext('2d');
+  if (!surfaceContext) return surface;
+  const image = surfaceContext.createImageData(size, size);
+  const half = size / 2;
+  const viewDirection = { x: 0, y: 0, z: 1 };
+  const halfLight = normalize({
+    x: frame.light.x + viewDirection.x,
+    y: frame.light.y + viewDirection.y,
+    z: frame.light.z + viewDirection.z,
+  });
+
+  for (let pixelY = 0; pixelY < size; pixelY += 1) {
+    const normalY = (pixelY + 0.5 - half) / half;
+    for (let pixelX = 0; pixelX < size; pixelX += 1) {
+      const normalX = (pixelX + 0.5 - half) / half;
+      const radiusSquared = normalX ** 2 + normalY ** 2;
+      if (radiusSquared >= 1) continue;
+      const normal = { x: normalX, y: normalY, z: Math.sqrt(1 - radiusSquared) };
+      const { latitudeRadians, longitudeRadians } = sphereCoordinates(
+        normal,
+        frame.pole,
+        frame.meridian,
+        frame.east,
+      );
+      const material = surfaceMaterial(planet.name, latitudeRadians, longitudeRadians);
+      const limbResponse = 0.66 + normal.z * 0.34;
+      const illumination = lambertianLight(normal, frame.light) * limbResponse;
+      const specular = material.specular * Math.max(0, dot(normal, frame.light)) *
+        Math.max(0, dot(normal, halfLight)) ** 28;
+      const index = (pixelY * size + pixelX) * 4;
+      for (let channel = 0; channel < 3; channel += 1) {
+        const linearAlbedo = (material.color[channel] / 255) ** 2.2;
+        image.data[index + channel] = Math.round(
+          clamp((linearAlbedo * illumination + specular) ** (1 / 2.2) * 255, 0, 255),
+        );
+      }
+      image.data[index + 3] = Math.round(clamp((1 - radiusSquared) * size * 0.55, 0, 1) * 255);
+    }
+  }
+  surfaceContext.putImageData(image, 0, 0);
+  planetTextureCache.set(cacheKey, surface);
+  if (planetTextureCache.size > 128) {
+    const oldest = planetTextureCache.keys().next().value;
+    if (oldest) planetTextureCache.delete(oldest);
+  }
+  return surface;
+}
+
+function drawPlanetSphere(
   context: CanvasRenderingContext2D,
   x: number,
   y: number,
   radius: number,
-  color: string,
-  name: string,
-  spin: number,
-  lightAngle: number,
+  planet: PlanetState,
+  frame: PlanetViewFrame,
 ) {
-  context.save();
-  context.beginPath();
-  context.arc(x, y, radius, 0, TAU);
-  context.clip();
-  const base = context.createRadialGradient(x - radius * 0.3, y - radius * 0.32, radius * 0.08, x, y, radius);
-  base.addColorStop(0, '#fff');
-  base.addColorStop(0.18, color);
-  base.addColorStop(1, color);
-  context.fillStyle = base;
-  context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-  drawSurfaceFeatures(context, x, y, radius, name, spin);
-  const lightX = Math.cos(lightAngle);
-  const lightY = Math.sin(lightAngle);
-  const shadow = context.createLinearGradient(
-    x + lightX * radius,
-    y + lightY * radius,
-    x - lightX * radius,
-    y - lightY * radius,
-  );
-  shadow.addColorStop(0, 'rgba(0,0,0,0)');
-  shadow.addColorStop(0.45, 'rgba(0,0,0,.08)');
-  shadow.addColorStop(0.57, 'rgba(0,0,0,.54)');
-  shadow.addColorStop(1, 'rgba(0,0,0,.9)');
-  context.fillStyle = shadow;
-  context.fillRect(x - radius, y - radius, radius * 2, radius * 2);
-  context.restore();
-  context.strokeStyle = 'rgba(255,255,255,.24)';
-  context.lineWidth = 0.8;
+  const texture = renderPlanetTexture(planet, radius, frame);
+  context.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
+  const atmosphereColor = planet.name === 'Earth'
+    ? 'rgba(112, 187, 255, .65)'
+    : planet.name === 'Venus'
+      ? 'rgba(255, 224, 157, .42)'
+      : planet.name === 'Neptune' || planet.name === 'Uranus'
+        ? 'rgba(154, 211, 245, .3)'
+        : 'rgba(255,255,255,.2)';
+  context.strokeStyle = atmosphereColor;
+  context.lineWidth = planet.name === 'Earth' || planet.name === 'Venus' ? 1.15 : 0.7;
   context.beginPath();
   context.arc(x, y, radius, 0, TAU);
   context.stroke();
+}
+
+function drawSaturnRingHalf(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  pole: CartesianPosition,
+  front: boolean,
+) {
+  const opening = clamp(Math.abs(pole.z), 0.075, 1);
+  const rotation = Math.atan2(pole.y, pole.x) + Math.PI / 2;
+  const nearSideStartsAtZero = pole.z >= 0;
+  const start = front === nearSideStartsAtZero ? 0 : Math.PI;
+  const end = start + Math.PI;
+  const bands = [
+    { radius: 2.05, width: 0.24, color: 'rgba(210, 194, 148, .52)' },
+    { radius: 1.72, width: 0.3, color: 'rgba(236, 219, 171, .72)' },
+    { radius: 1.38, width: 0.16, color: 'rgba(161, 142, 103, .58)' },
+  ];
+  context.save();
+  for (const band of bands) {
+    context.strokeStyle = band.color;
+    context.lineWidth = Math.max(0.7, radius * band.width);
+    context.beginPath();
+    context.ellipse(
+      x,
+      y,
+      radius * band.radius,
+      radius * band.radius * opening,
+      rotation,
+      start,
+      end,
+    );
+    context.stroke();
+  }
+  context.restore();
 }
 
 function drawSolarScene(frame: CanvasFrame) {
@@ -686,17 +837,14 @@ function drawSolarScene(frame: CanvasFrame) {
     const projected = projectSolarVector(eclipticPosition, centerX, centerY, orbitScale);
     const { x, y } = projected;
     const radius = planetRadius(planet.radiusKm);
+    const viewFrame = planetViewFrame(planet, eclipticPosition, realtimeOffsetSeconds);
     if (planet.name === 'Saturn') {
-      context.strokeStyle = 'rgba(227, 213, 165, .7)';
-      context.lineWidth = Math.max(1, radius * 0.25);
-      context.beginPath();
-      const ringOpening = clamp(Math.abs(planet.ringTiltDegrees ?? 12) / 28, 0.18, 0.72);
-      context.ellipse(x, y, radius * 1.8, radius * ringOpening, -0.18, 0, TAU);
-      context.stroke();
+      drawSaturnRingHalf(context, x, y, radius, viewFrame.pole, false);
     }
-    const physicalSpin = planet.primeMeridianDegrees +
-      realtimeOffsetSeconds * 360 / (planet.rotationPeriodHours * 3_600);
-    drawPlanetSurface(context, x, y, radius, planet.color, planet.name, physicalSpin, Math.atan2(centerY - y, centerX - x));
+    drawPlanetSphere(context, x, y, radius, planet, viewFrame);
+    if (planet.name === 'Saturn') {
+      drawSaturnRingHalf(context, x, y, radius, viewFrame.pole, true);
+    }
     planetScreen.set(planet.key, { x, y, radius });
     context.fillStyle = 'rgba(231, 237, 249, .82)';
     context.font = '500 9px ui-monospace, SFMono-Regular, Menlo, monospace';

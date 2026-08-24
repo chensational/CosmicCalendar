@@ -12,13 +12,14 @@
 - Astronomy is memoized by location and a five-second date bucket. Calendar and multi-billion-year distance models recalculate only when their inputs change.
 - A one-minute finite-difference apparent-motion sample lets the renderer extrapolate Sun, Moon, Galactic plane, and lunar-Earth positions smoothly between five-second ephemeris buckets without invoking the astronomy engine per frame.
 - The Solar System uses logarithmic orbit radii so all planets fit without unstable extreme transforms. Satellite offsets are locally exaggerated instead of increasing world-coordinate precision requirements.
+- Planet surfaces rasterize into tiny 2× supersampled transparent canvases keyed by quantized pole, rotation, lighting, and screen radius. The expensive spherical lighting/albedo loop runs only on a cache miss; normal Solar frames use nine small `drawImage` calls.
 - No third-party request occurs at runtime. The web demo makes one same-origin static catalog request; JPL satellite seeds and every astronomy model remain checked in.
 
 Current production output:
 
 | Artifact | Raw | Gzip |
 | --- | ---: | ---: |
-| React library JS (ESM, including CosmicWatermark export) | ~188.5 KB | ~61 KB |
+| React library JS (ESM, including CosmicWatermark export) | ~193.5 KB | ~62.5 KB |
 | Lazy star-catalog library chunk | ~218.5 KB | ~140 KB |
 | Component CSS | ~13.5 KB | ~3.5 KB |
 | Demo JS | ~308 KB | ~108 KB |

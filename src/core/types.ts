@@ -87,6 +87,9 @@ export interface PlanetState {
   primeMeridianDegrees: number;
   rotationPeriodHours: number;
   orbit: OrbitalElements;
+  axisNorthEcliptic: CartesianPosition;
+  primeMeridianEcliptic: CartesianPosition;
+  eastEcliptic: CartesianPosition;
 }
 
 export interface SatelliteState {

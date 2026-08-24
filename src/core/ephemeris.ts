@@ -13,6 +13,7 @@ import {
   Observer,
   RotateVector,
   RotationAxis,
+  Rotation_EQJ_ECL,
   Rotation_EQJ_EQD,
   Rotation_GAL_EQJ,
   Spherical,
@@ -193,6 +194,35 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
   const illumination = planet.body === Body.Earth
     ? { phase_fraction: 1, phase_angle: 0, ring_tilt: undefined }
     : Illumination(planet.body, date);
+  const alpha = degreesToRadians(axis.ra * 15);
+  const delta = degreesToRadians(axis.dec);
+  const spin = degreesToRadians(axis.spin);
+  const equatorialReference = {
+    x: -Math.sin(delta) * Math.cos(alpha),
+    y: -Math.sin(delta) * Math.sin(alpha),
+    z: Math.cos(delta),
+  };
+  const equatorialEast = {
+    x: -Math.sin(alpha),
+    y: Math.cos(alpha),
+    z: 0,
+  };
+  const primeMeridianEqj = {
+    x: equatorialReference.x * Math.cos(spin) + equatorialEast.x * Math.sin(spin),
+    y: equatorialReference.y * Math.cos(spin) + equatorialEast.y * Math.sin(spin),
+    z: equatorialReference.z * Math.cos(spin) + equatorialEast.z * Math.sin(spin),
+  };
+  const eastEqj = {
+    x: -equatorialReference.x * Math.sin(spin) + equatorialEast.x * Math.cos(spin),
+    y: -equatorialReference.y * Math.sin(spin) + equatorialEast.y * Math.cos(spin),
+    z: -equatorialReference.z * Math.sin(spin) + equatorialEast.z * Math.cos(spin),
+  };
+  const eclipticRotation = Rotation_EQJ_ECL().rot;
+  const rotateEqjToEcliptic = (value: CartesianPosition): CartesianPosition => ({
+    x: eclipticRotation[0][0] * value.x + eclipticRotation[1][0] * value.y + eclipticRotation[2][0] * value.z,
+    y: eclipticRotation[0][1] * value.x + eclipticRotation[1][1] * value.y + eclipticRotation[2][1] * value.z,
+    z: eclipticRotation[0][2] * value.x + eclipticRotation[1][2] * value.y + eclipticRotation[2][2] * value.z,
+  });
 
   return {
     key: planet.key,
@@ -210,6 +240,9 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
     primeMeridianDegrees: axis.spin,
     rotationPeriodHours: planet.rotationPeriodHours,
     orbit: planet.orbit,
+    axisNorthEcliptic: rotateEqjToEcliptic(asCartesian(axis.north)),
+    primeMeridianEcliptic: rotateEqjToEcliptic(primeMeridianEqj),
+    eastEcliptic: rotateEqjToEcliptic(eastEqj),
   };
 }
 
