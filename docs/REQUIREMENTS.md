@@ -18,10 +18,10 @@ This ledger prevents completion from being inferred from a build alone.
 | Sun birth-to-present trail | Galactic canvas replay | Code/model source audit | Implemented; exact 4.567 Gyr backtrace is scientifically unavailable |
 | Milky Way toward Great Attractor with expansion/Big Bang history | Laniākea flow field, expansion shells, explicit non-worldline label | Tully et al. source + non-claim audit | Implemented as illustrative reconstruction |
 | Main animation and four scale sub-animations | Main canvas + scale rail | React production build and runtime audit | Implemented |
-| Smooth scale transitions on scroll | spring target/crossfade canvas | Interaction code audit | Implemented |
+| Smooth scale transitions on scroll | normalized/capped native wheel input + spring target/crossfade canvas | interaction unit tests and browser wheel-event audit | Verified |
 | Boundary fast-forward/rewind to heat death/inflation | boundary wheel logic + logarithmic epoch control | Timeline unit tests | Verified |
 | Five dynamic distance statistics | `getDistanceMetrics` + expandable live console | WGS84 latitude tests and methods ledger | Verified as current-rate-equivalent models |
 | Parenthetical CMB-relative totals | same metrics with `cmbFrameDistanceKm` | hierarchy verifier in JS/Swift | Verified as labeled scalar hierarchy models |
 | Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; unsigned full-Xcode app/widget builds across macOS, iOS/iPadOS, watchOS, and visionOS | Verified |
 | Performant React component | ESM/CJS package, one bounded Canvas loop | production bundle sizes and build | Verified |
-| Performance efficiency | DPR cap, offscreen pause, reduced motion, lazy quantized catalog and cached paths | architecture audit, bundle output, ~2.1 ms catalog projection fixture | Verified |
+| Performance efficiency | adaptive DPR/frame/effect tiers, offscreen pause, reduced motion, lazy quantized catalog and cached paths | architecture audit, bundle output, ~2.1 ms catalog projection fixture, 4× CPU/software-Canvas mobile profile | Verified |

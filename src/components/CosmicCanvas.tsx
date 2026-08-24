@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { adaptiveCanvasPixelRatio, dampedValue, wheelDeltaToScaleStep } from '../core/interaction';
+import {
+  adaptiveCanvasPixelRatio,
+  dampedValue,
+  INITIAL_RENDER_QUALITY,
+  nextAdaptiveRenderQuality,
+  wheelDeltaToScaleStep,
+} from '../core/interaction';
 import type { HorizonSnapshot, LunarHorizonSnapshot, SolarSystemSnapshot, VisibleStar } from '../core/types';
 import { renderCosmicFrame } from './canvasRenderer';
 
@@ -31,9 +37,11 @@ export function CosmicCanvas({
   const displayScaleRef = useRef(scalePosition);
   const frameRef = useRef({ horizon, lunar, solar, stars, cosmicAgeYears, live, reducedMotion });
   const requestRenderRef = useRef<() => void>(() => undefined);
+  const onWheelRef = useRef(onWheel);
 
   targetScaleRef.current = scalePosition;
   frameRef.current = { horizon, lunar, solar, stars, cosmicAgeYears, live, reducedMotion };
+  onWheelRef.current = onWheel;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -45,9 +53,38 @@ export function CosmicCanvas({
     let pageVisible = !document.hidden;
     let width = 1;
     let height = 1;
+    let basePixelRatio = 1;
+    let quality = { ...INITIAL_RENDER_QUALITY };
+    let backingResolutionDirty = false;
     let transitionFrameIntervalMilliseconds = 1_000 / 30;
     let lastRenderedAt = 0;
     let lastAnimationAt = 0;
+    let recentLongTaskCount = 0;
+    let longTaskResetTimer = 0;
+
+    const adoptQuality = (nextQuality: typeof quality) => {
+      if (nextQuality.resolutionScale !== quality.resolutionScale) {
+        backingResolutionDirty = true;
+      }
+      quality = nextQuality;
+      canvas.dataset.renderScale = quality.resolutionScale.toFixed(2);
+      canvas.dataset.atmosphereFps = String(quality.atmosphericFramesPerSecond);
+    };
+
+    const applyBackingResolution = () => {
+      const dpr = Math.max(0.55, basePixelRatio * quality.resolutionScale);
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const backingPixels = canvas.width * canvas.height;
+      const transitionFramesPerSecond = quality.resolutionScale < 0.7
+        ? 18
+        : backingPixels > 950_000 ? 24 : 30;
+      transitionFrameIntervalMilliseconds = 1_000 / transitionFramesPerSecond;
+      canvas.dataset.renderScale = quality.resolutionScale.toFixed(2);
+      canvas.dataset.atmosphereFps = String(quality.atmosphericFramesPerSecond);
+      backingResolutionDirty = false;
+    };
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
@@ -55,12 +92,8 @@ export function CosmicCanvas({
       height = Math.max(1, Math.floor(rect.height));
       // Keep enough backing pixels for fine orbit lines without spending Retina
       // fill-rate on more than the eye can resolve at this component size.
-      const dpr = adaptiveCanvasPixelRatio(width, height, window.devicePixelRatio || 1);
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const backingPixels = canvas.width * canvas.height;
-      transitionFrameIntervalMilliseconds = 1_000 / (backingPixels > 950_000 ? 24 : 30);
+      basePixelRatio = adaptiveCanvasPixelRatio(width, height, window.devicePixelRatio || 1);
+      applyBackingResolution();
     };
 
     const draw = (timestamp: number) => {
@@ -68,7 +101,10 @@ export function CosmicCanvas({
       const isTransitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
       const frameIntervalMilliseconds = isTransitioning
         ? transitionFrameIntervalMilliseconds
-        : Math.max(transitionFrameIntervalMilliseconds, 1_000 / 15);
+        : Math.max(
+          transitionFrameIntervalMilliseconds,
+          1_000 / quality.atmosphericFramesPerSecond,
+        );
       if (!frameRef.current.reducedMotion && timestamp - lastRenderedAt < frameIntervalMilliseconds) {
         animationFrame = window.requestAnimationFrame(draw);
         return;
@@ -78,8 +114,10 @@ export function CosmicCanvas({
       displayScaleRef.current = state.reducedMotion
         ? targetScaleRef.current
         : dampedValue(displayScaleRef.current, targetScaleRef.current, deltaSeconds);
+      if (backingResolutionDirty) applyBackingResolution();
       lastAnimationAt = timestamp;
       lastRenderedAt = timestamp;
+      const renderStartedAt = performance.now();
       renderCosmicFrame({
         context,
         width,
@@ -89,8 +127,12 @@ export function CosmicCanvas({
         realtimeOffsetSeconds: state.live
           ? Math.max(0, Math.min((Date.now() - state.solar.date.getTime()) / 1_000, 120))
           : 0,
+        renderQuality: quality.resolutionScale,
         ...state,
       });
+      const renderMilliseconds = performance.now() - renderStartedAt;
+      canvas.dataset.renderMilliseconds = renderMilliseconds.toFixed(1);
+      adoptQuality(nextAdaptiveRenderQuality(quality, renderMilliseconds));
       const transitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
       const atmosphereIsActive = displayScaleRef.current < 0.5;
       if (visible && !state.reducedMotion && (transitioning || atmosphereIsActive)) {
@@ -116,9 +158,34 @@ export function CosmicCanvas({
       pageVisible = !document.hidden;
       if (pageVisible && visible) renderOnce(); else window.cancelAnimationFrame(animationFrame);
     };
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      onWheelRef.current(wheelDeltaToScaleStep(event.deltaY, event.deltaMode, canvas.clientHeight));
+    };
+    const longTaskObserver = typeof PerformanceObserver !== 'undefined' &&
+      PerformanceObserver.supportedEntryTypes?.includes('longtask')
+      ? new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!visible || !pageVisible) continue;
+          recentLongTaskCount += entry.duration >= 100 ? 2 : 1;
+          window.clearTimeout(longTaskResetTimer);
+          longTaskResetTimer = window.setTimeout(() => { recentLongTaskCount = 0; }, 5_000);
+          if (recentLongTaskCount < 2) continue;
+          recentLongTaskCount = 0;
+          // Long Tasks include deferred Canvas rasterization that is not visible
+          // in the synchronous render call timing above.
+          adoptQuality(nextAdaptiveRenderQuality(
+            nextAdaptiveRenderQuality(quality, entry.duration),
+            entry.duration,
+          ));
+        }
+      })
+      : undefined;
     resizeObserver.observe(canvas);
     intersectionObserver.observe(canvas);
     document.addEventListener('visibilitychange', handleVisibility);
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    longTaskObserver?.observe({ type: 'longtask', buffered: false });
     requestRenderRef.current = renderOnce;
     resize();
     renderOnce();
@@ -128,6 +195,9 @@ export function CosmicCanvas({
       resizeObserver.disconnect();
       intersectionObserver.disconnect();
       document.removeEventListener('visibilitychange', handleVisibility);
+      canvas.removeEventListener('wheel', handleWheel);
+      longTaskObserver?.disconnect();
+      window.clearTimeout(longTaskResetTimer);
       requestRenderRef.current = () => undefined;
     };
   }, []);
@@ -143,10 +213,6 @@ export function CosmicCanvas({
       aria-label="Animated cosmic position visualization"
       role="img"
       tabIndex={0}
-      onWheel={(event) => {
-        event.preventDefault();
-        onWheel(wheelDeltaToScaleStep(event.deltaY, event.deltaMode, event.currentTarget.clientHeight));
-      }}
     />
   );
 }

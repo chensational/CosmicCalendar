@@ -28,6 +28,7 @@ export interface CanvasFrame {
   scalePosition: number;
   elapsedSeconds: number;
   realtimeOffsetSeconds: number;
+  renderQuality: number;
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
@@ -294,6 +295,7 @@ function drawCatalogStars(
   elapsedSeconds: number,
   stars: readonly VisibleStar[],
   reducedMotion: boolean,
+  renderQuality: number,
 ) {
   const catalogPaths = buildCatalogStarPaths(stars, width, height);
   context.save();
@@ -304,10 +306,12 @@ function drawCatalogStars(
   catalogPaths.paths.forEach((path, index) => {
     const colorBucket = Math.floor(index / 5);
     const brightnessBucket = index % 5;
+    const minimumBrightnessBucket = renderQuality < 0.62 ? 2 : renderQuality < 0.82 ? 1 : 0;
+    if (brightnessBucket < minimumBrightnessBucket) return;
     context.fillStyle = `rgba(${CATALOG_STAR_COLORS[colorBucket]}, ${0.35 + brightnessBucket * 0.12})`;
     context.fill(path);
   });
-  if (!reducedMotion) {
+  if (!reducedMotion && renderQuality >= 0.7) {
     for (const star of catalogPaths.twinkles) {
       const airMassResponse = clamp((star.relativeAirMass - 1) / 8, 0, 1);
       const pulse = (0.035 + airMassResponse * 0.1) *
@@ -354,7 +358,15 @@ function drawHorizonScene(frame: CanvasFrame) {
   context.save();
   context.globalAlpha = 1 - smoothstep(-16, -2, sunHeight);
   if (stars.length) {
-    drawCatalogStars(context, width, height, elapsedSeconds, stars, frame.reducedMotion);
+    drawCatalogStars(
+      context,
+      width,
+      height,
+      elapsedSeconds,
+      stars,
+      frame.reducedMotion,
+      frame.renderQuality,
+    );
   } else {
     drawStars(context, width, height * 0.74, elapsedSeconds, frame.reducedMotion ? 0 : 0.12);
   }

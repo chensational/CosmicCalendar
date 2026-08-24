@@ -3,10 +3,12 @@
 ## React renderer
 
 - A single Canvas 2D surface renders the active scale and cross-fades only one adjacent scale during transition.
-- Backing resolution is adaptive: device pixel ratio is capped at 2 and the main scene is held near a 1.25-million-pixel budget. Scale transitions render at 24–30 fps; physically slow atmospheric motion settles to 15 fps.
+- Backing resolution begins with device pixel ratio capped at 2 and the main scene held near a 1.25-million-pixel budget. A conservative quality controller combines synchronous render timing with the browser Long Tasks signal so deferred Canvas raster work is visible: sustained pressure can step backing resolution from 100% to 55%, transitions from 30 to 18 fps, and atmospheric motion from 15 to 8 fps. It recovers only after a long stable interval to avoid oscillation.
+- Low quality tiers preserve planets, orbits, and bright catalog stars. They first omit the faintest star bucket, then the next-faintest bucket and scintillation, which cuts repeated path fills while keeping the recognizable sky.
 - `IntersectionObserver` and Page Visibility stop the animation offscreen or in a background tab; `ResizeObserver` updates backing resolution only when necessary.
 - Motion preference is honored. With reduced motion enabled, changes render a static frame instead of maintaining `requestAnimationFrame`.
 - Transition damping is time-based rather than frame-based, so scale motion has the same timing on 24, 30, 60, and 120 Hz displays.
+- Wheel input is normalized across pixel, line, and page delta modes, capped at 4% of one scale per event, and captured with a non-passive listener so interacting with the visualization does not scroll the document underneath it.
 - The 9,096-record Bright Star Catalogue is a 160 KB quantized binary loaded asynchronously. Its full proper-motion/precession/horizon/extinction projection takes about 2.1 ms in the checked Chromium fixture every five seconds; only the resulting visible hemisphere is retained.
 - Catalog star paths and Kepler orbit paths are generated once per state/size and reused. Space stars remain photometrically stable; only bright terrestrial stars receive altitude-sensitive scintillation.
 - Astronomy is memoized by location and a five-second date bucket. Calendar and multi-billion-year distance models recalculate only when their inputs change.
@@ -19,10 +21,10 @@ Current production output:
 
 | Artifact | Raw | Gzip |
 | --- | ---: | ---: |
-| React library JS (ESM, including CosmicWatermark export) | ~193.5 KB | ~62.5 KB |
+| React library JS (ESM, including CosmicWatermark export) | ~196 KB | ~63 KB |
 | Lazy star-catalog library chunk | ~218.5 KB | ~140 KB |
 | Component CSS | ~13.5 KB | ~3.5 KB |
-| Demo JS | ~308 KB | ~108 KB |
+| Demo JS | ~314 KB | ~110 KB |
 | Demo star-catalog binary | ~164 KB | n/a |
 
 The inherited `CosmicWatermark` loads Three.js dynamically only when that optional decorative component is mounted; the main calendar stays on Canvas 2D because its vector workload remains comfortably bounded without a WebGL scene graph or texture uploads.

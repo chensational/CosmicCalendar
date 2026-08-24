@@ -98,11 +98,11 @@ See [Scientific method and source ledger](docs/SCIENTIFIC_METHOD.md) for constan
 
 ## Performance and privacy
 
-- Canvas rendering is capped at 2× device pixel ratio and uses one visible animation loop.
+- Canvas rendering starts from a 2× device-pixel-ratio cap, then adapts resolution, frame rate, and faint-star effects when measured main-thread or deferred raster work is too expensive.
 - `ResizeObserver` and `IntersectionObserver` pause work offscreen.
 - No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The demo loads one same-origin static star-catalog binary.
 - Browser coordinates remain in local storage. Apple coordinates remain in the signed app group's `UserDefaults`.
-- Production React library (including exported CosmicWatermark): approximately **62.5 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
+- Production React library (including exported CosmicWatermark): approximately **63.0 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
 
 More detail: [Performance architecture](docs/PERFORMANCE.md).
 
