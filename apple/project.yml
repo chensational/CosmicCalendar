@@ -1,0 +1,121 @@
+name: CosmicCalendar
+options:
+  bundleIdPrefix: com.chensational
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+    watchOS: "10.0"
+    visionOS: "1.0"
+  createIntermediateGroups: true
+packages:
+  CosmicCalendarCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: ""
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+targetTemplates:
+  app:
+    type: application
+    sources: [App]
+    dependencies:
+      - package: CosmicCalendarCore
+        product: CosmicCalendarCore
+    settings:
+      base:
+        PRODUCT_NAME: Cosmic Calendar
+        CODE_SIGN_ENTITLEMENTS: App/CosmicCalendar.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.
+  widget:
+    type: app-extension
+    sources: [Widgets]
+    dependencies:
+      - package: CosmicCalendarCore
+        product: CosmicCalendarCore
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: Widgets/CosmicCalendarWidget.entitlements
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier: com.apple.widgetkit-extension
+targets:
+  CosmicCalendarPhone:
+    templates: [app]
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar
+        TARGETED_DEVICE_FAMILY: "1,2"
+    dependencies:
+      - target: CosmicCalendarPhoneWidgets
+        embed: true
+  CosmicCalendarPhoneWidgets:
+    templates: [widget]
+    platform: iOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.widgets
+  CosmicCalendarMac:
+    templates: [app]
+    platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.mac
+    dependencies:
+      - target: CosmicCalendarMacWidgets
+        embed: true
+  CosmicCalendarMacWidgets:
+    templates: [widget]
+    platform: macOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.mac.widgets
+  CosmicCalendarWatch:
+    templates: [app]
+    platform: watchOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.watch
+    dependencies:
+      - target: CosmicCalendarWatchWidgets
+        embed: true
+  CosmicCalendarWatchWidgets:
+    templates: [widget]
+    platform: watchOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.watch.widgets
+  CosmicCalendarVision:
+    templates: [app]
+    platform: visionOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.vision
+    dependencies:
+      - target: CosmicCalendarVisionWidgets
+        embed: true
+  CosmicCalendarVisionWidgets:
+    templates: [widget]
+    platform: visionOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chensational.cosmiccalendar.vision.widgets
+schemes:
+  CosmicCalendarPhone:
+    build:
+      targets: { CosmicCalendarPhone: all, CosmicCalendarPhoneWidgets: all }
+    run: { config: Debug }
+  CosmicCalendarMac:
+    build:
+      targets: { CosmicCalendarMac: all, CosmicCalendarMacWidgets: all }
+    run: { config: Debug }
+  CosmicCalendarWatch:
+    build:
+      targets: { CosmicCalendarWatch: all, CosmicCalendarWatchWidgets: all }
+    run: { config: Debug }
+  CosmicCalendarVision:
+    build:
+      targets: { CosmicCalendarVision: all, CosmicCalendarVisionWidgets: all }
+    run: { config: Debug }

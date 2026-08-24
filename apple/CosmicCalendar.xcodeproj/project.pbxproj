@@ -1,0 +1,1129 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		065A4E2A0B0AD2C7CDDFDB96 /* CosmicCalendarPhoneWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FF29C6111B093D81C9E9ADE /* CosmicCalendarPhoneWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		085574DC557C318054A60BF3 /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 64D0171C2672FC4E9355DC54 /* CosmicCalendarCore */; };
+		10864AAF6A16FF48E58BD802 /* CosmicCalendarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */; };
+		170C453DD5A86D4B879A326E /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF014D2C8E10426E28BAFAA6 /* ContentView.swift */; };
+		1B64A82399CA7B0E2C454AA5 /* CosmicCalendarWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */; };
+		1DA4BE4876BA570E81012D7D /* CosmicLocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */; };
+		1E4850F323CF4C9C5FC1B588 /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 8755707C4EB25C62C790BD87 /* CosmicCalendarCore */; };
+		1FA61D5BD8B4FC243B200BCA /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF014D2C8E10426E28BAFAA6 /* ContentView.swift */; };
+		21AE5E5319AC1B8CFE250D5F /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 027FDA06440B6AFE63CB513B /* CosmicCalendarCore */; };
+		2AB65C9E77F6DFB54B8F5AA5 /* CosmicSkyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */; };
+		2AD2C32654B1EC83B602AEFA /* CosmicCalendarWatchWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = CEF88A5C91DC280EB2D1D884 /* CosmicCalendarWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		3625894725D567AC3EB47FC7 /* CosmicSkyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */; };
+		3A6C5C0E82360821F534EF37 /* CosmicCalendarWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */; };
+		3B34562B5DD0F74723C710D3 /* CosmicCalendarWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */; };
+		420E2870CDC0219195CBEC75 /* CosmicSkyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */; };
+		63A9EAD59875A56763639240 /* CosmicCalendarWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */; };
+		6A7152BD5AA079F2B84584FD /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 24788084203483DEF4D577A0 /* CosmicCalendarCore */; };
+		7F7156B570DFEFEA6877595D /* CosmicCalendarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */; };
+		8E40EC46AC91DB0A456CD653 /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = F5C0E91D9431FEB90AD67F81 /* CosmicCalendarCore */; };
+		93348B2F64A22EE765074274 /* CosmicLocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */; };
+		9632F1920BF7EC358DF38AAD /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 1F91857C101D3671C3071031 /* CosmicCalendarCore */; };
+		9EC7494928BD7BC0AF10D27C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF014D2C8E10426E28BAFAA6 /* ContentView.swift */; };
+		A201A4F3C74B985426206DF7 /* CosmicCalendarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */; };
+		AF1C91EEF9A8AFCF0E6D0741 /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 9F5A4438FAAB62BE1645383A /* CosmicCalendarCore */; };
+		C9AE2B3115F0E6FDA48FE9E5 /* CosmicLocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */; };
+		CDB5C79C92E7952079B72DF0 /* CosmicSkyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */; };
+		D3C42597790DFA6148E0CDB8 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF014D2C8E10426E28BAFAA6 /* ContentView.swift */; };
+		DCC4E27E33534D4BB2E867A4 /* CosmicCalendarMacWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 82B6353F95C7D025E660DC4D /* CosmicCalendarMacWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E55616C869CD5C1A8871B47B /* CosmicLocationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */; };
+		FB1180805A4D163028093CFE /* CosmicCalendarApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */; };
+		FC811DC15AF4EB5763D8A7FD /* CosmicCalendarVisionWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 04BBA2962AE57708CB83B10F /* CosmicCalendarVisionWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		FEAC458F8F9A04252D950C16 /* CosmicCalendarCore in Frameworks */ = {isa = PBXBuildFile; productRef = 0AC15374C1CEF38F7C19E521 /* CosmicCalendarCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		49005BC72688D566B30D6F08 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 874A2EB87A777FDF28FC6A5C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D718DFE1AF2F12D37CB27CC9;
+			remoteInfo = CosmicCalendarWatchWidgets;
+		};
+		899315D39ABDA9E8674D39A8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 874A2EB87A777FDF28FC6A5C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 58B20BDB5F74CA76ABDAA37D;
+			remoteInfo = CosmicCalendarVisionWidgets;
+		};
+		AEDD307C36EA4B462EE706C8 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 874A2EB87A777FDF28FC6A5C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 90540CA73A970C89AD99CA94;
+			remoteInfo = CosmicCalendarMacWidgets;
+		};
+		BC451C441A1C5E49E80FB687 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 874A2EB87A777FDF28FC6A5C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 41E54B492640C4D2D61EFE56;
+			remoteInfo = CosmicCalendarPhoneWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		2C778D207DA1F52D832282F4 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				FC811DC15AF4EB5763D8A7FD /* CosmicCalendarVisionWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		776CAB2941F07E90BF4DB553 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				2AD2C32654B1EC83B602AEFA /* CosmicCalendarWatchWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8BD8D316E84CFEE9C89A5092 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DCC4E27E33534D4BB2E867A4 /* CosmicCalendarMacWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9DF4DB1B1F93460E78F87864 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				065A4E2A0B0AD2C7CDDFDB96 /* CosmicCalendarPhoneWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		04BBA2962AE57708CB83B10F /* CosmicCalendarVisionWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = CosmicCalendarVisionWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		25AB367E66A9D7C6DB214959 /* CosmicCalendarVision.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CosmicCalendarVision.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2CF785A80248AACD2D063F0A /* CosmicCalendarWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CosmicCalendarWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmicCalendarWidget.swift; sourceTree = "<group>"; };
+		60776C5B0309131851994D28 /* CosmicCalendarWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CosmicCalendarWidget.entitlements; sourceTree = "<group>"; };
+		6E14E97D524EF14329D80577 /* apple */ = {isa = PBXFileReference; lastKnownFileType = folder; name = apple; path = .; sourceTree = SOURCE_ROOT; };
+		8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmicSkyView.swift; sourceTree = "<group>"; };
+		82B6353F95C7D025E660DC4D /* CosmicCalendarMacWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CosmicCalendarMacWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FF29C6111B093D81C9E9ADE /* CosmicCalendarPhoneWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = CosmicCalendarPhoneWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmicCalendarApp.swift; sourceTree = "<group>"; };
+		A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmicLocationStore.swift; sourceTree = "<group>"; };
+		AF014D2C8E10426E28BAFAA6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		CEF88A5C91DC280EB2D1D884 /* CosmicCalendarWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CosmicCalendarWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D5F772EDDC4E2EFD55820F86 /* CosmicCalendar.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CosmicCalendar.entitlements; sourceTree = "<group>"; };
+		EAB0EC7D003341ECC42D5C87 /* CosmicCalendarMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CosmicCalendarMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F111C375C857B96255C93E64 /* CosmicCalendarPhone.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = CosmicCalendarPhone.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		2863465F4AF0CD77651008E1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF1C91EEF9A8AFCF0E6D0741 /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		56D63A3291AF088AC0071CAD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				21AE5E5319AC1B8CFE250D5F /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		59D39745B8EE289EAC219F9A /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				085574DC557C318054A60BF3 /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		699BF534378CDA474E758BE3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8E40EC46AC91DB0A456CD653 /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		72342A11A5726B94C1602FF2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6A7152BD5AA079F2B84584FD /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A981E6F0341627158DE98F06 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9632F1920BF7EC358DF38AAD /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B2675EA2BBEF783761D93E12 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1E4850F323CF4C9C5FC1B588 /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		CC334A3FDCE748C2C3E1DB5B /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FEAC458F8F9A04252D950C16 /* CosmicCalendarCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		1D3325107BF9E78F06DF9DF1 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				6E14E97D524EF14329D80577 /* apple */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		21BF2EBD6F75597E31B3F2BB /* Widgets */ = {
+			isa = PBXGroup;
+			children = (
+				60776C5B0309131851994D28 /* CosmicCalendarWidget.entitlements */,
+				42ED6558C4B8E16438A468DD /* CosmicCalendarWidget.swift */,
+			);
+			path = Widgets;
+			sourceTree = "<group>";
+		};
+		591044E8A0624BB61B42030A = {
+			isa = PBXGroup;
+			children = (
+				DBC7BA0A5826A662A815F639 /* App */,
+				1D3325107BF9E78F06DF9DF1 /* Packages */,
+				21BF2EBD6F75597E31B3F2BB /* Widgets */,
+				DA856011B9E7F9290A8F9ECA /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		DA856011B9E7F9290A8F9ECA /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				EAB0EC7D003341ECC42D5C87 /* CosmicCalendarMac.app */,
+				82B6353F95C7D025E660DC4D /* CosmicCalendarMacWidgets.appex */,
+				F111C375C857B96255C93E64 /* CosmicCalendarPhone.app */,
+				8FF29C6111B093D81C9E9ADE /* CosmicCalendarPhoneWidgets.appex */,
+				25AB367E66A9D7C6DB214959 /* CosmicCalendarVision.app */,
+				04BBA2962AE57708CB83B10F /* CosmicCalendarVisionWidgets.appex */,
+				2CF785A80248AACD2D063F0A /* CosmicCalendarWatch.app */,
+				CEF88A5C91DC280EB2D1D884 /* CosmicCalendarWatchWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		DBC7BA0A5826A662A815F639 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				AF014D2C8E10426E28BAFAA6 /* ContentView.swift */,
+				D5F772EDDC4E2EFD55820F86 /* CosmicCalendar.entitlements */,
+				9F014AFD219E6CE8E4F613C1 /* CosmicCalendarApp.swift */,
+				A52896B9F62EC54414636CFE /* CosmicLocationStore.swift */,
+				8022B4AC9A1D986A0673A829 /* CosmicSkyView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		32ADB41DD555189DF07EB470 /* CosmicCalendarMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5074D62F342BECF2D94E2249 /* Build configuration list for PBXNativeTarget "CosmicCalendarMac" */;
+			buildPhases = (
+				B26F4D9B41C143B2AC658718 /* Sources */,
+				56D63A3291AF088AC0071CAD /* Frameworks */,
+				8BD8D316E84CFEE9C89A5092 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2C4883D26A077D38404558E5 /* PBXTargetDependency */,
+			);
+			name = CosmicCalendarMac;
+			packageProductDependencies = (
+				027FDA06440B6AFE63CB513B /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarMac;
+			productReference = EAB0EC7D003341ECC42D5C87 /* CosmicCalendarMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+		41E54B492640C4D2D61EFE56 /* CosmicCalendarPhoneWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E5DE7EF93626FD934B14EFF1 /* Build configuration list for PBXNativeTarget "CosmicCalendarPhoneWidgets" */;
+			buildPhases = (
+				E86422AA2A07285D57112FD9 /* Sources */,
+				A981E6F0341627158DE98F06 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CosmicCalendarPhoneWidgets;
+			packageProductDependencies = (
+				1F91857C101D3671C3071031 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarPhoneWidgets;
+			productReference = 8FF29C6111B093D81C9E9ADE /* CosmicCalendarPhoneWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		58B20BDB5F74CA76ABDAA37D /* CosmicCalendarVisionWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AF006D92D7E886E07569FEDF /* Build configuration list for PBXNativeTarget "CosmicCalendarVisionWidgets" */;
+			buildPhases = (
+				E1DCD7DFC62E26CB05890D95 /* Sources */,
+				CC334A3FDCE748C2C3E1DB5B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CosmicCalendarVisionWidgets;
+			packageProductDependencies = (
+				0AC15374C1CEF38F7C19E521 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarVisionWidgets;
+			productReference = 04BBA2962AE57708CB83B10F /* CosmicCalendarVisionWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		65BC582BE57995ACB68BF712 /* CosmicCalendarWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 911EEB6E56514F15DA684065 /* Build configuration list for PBXNativeTarget "CosmicCalendarWatch" */;
+			buildPhases = (
+				10E1603FAEF13AF17AE3C70C /* Sources */,
+				59D39745B8EE289EAC219F9A /* Frameworks */,
+				776CAB2941F07E90BF4DB553 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9029A2827E4618946A40A9DB /* PBXTargetDependency */,
+			);
+			name = CosmicCalendarWatch;
+			packageProductDependencies = (
+				64D0171C2672FC4E9355DC54 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarWatch;
+			productReference = 2CF785A80248AACD2D063F0A /* CosmicCalendarWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
+		80B92B4F04CF53A1EF858123 /* CosmicCalendarPhone */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 858AB58C3A18BB722361B033 /* Build configuration list for PBXNativeTarget "CosmicCalendarPhone" */;
+			buildPhases = (
+				AF283DC304E43DA596A13FDE /* Sources */,
+				72342A11A5726B94C1602FF2 /* Frameworks */,
+				9DF4DB1B1F93460E78F87864 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2DA61481D622C1EF12386331 /* PBXTargetDependency */,
+			);
+			name = CosmicCalendarPhone;
+			packageProductDependencies = (
+				24788084203483DEF4D577A0 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarPhone;
+			productReference = F111C375C857B96255C93E64 /* CosmicCalendarPhone.app */;
+			productType = "com.apple.product-type.application";
+		};
+		90540CA73A970C89AD99CA94 /* CosmicCalendarMacWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 42DC293B1B989237DD804C00 /* Build configuration list for PBXNativeTarget "CosmicCalendarMacWidgets" */;
+			buildPhases = (
+				E5133794853CCADA27FA3FEF /* Sources */,
+				B2675EA2BBEF783761D93E12 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CosmicCalendarMacWidgets;
+			packageProductDependencies = (
+				8755707C4EB25C62C790BD87 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarMacWidgets;
+			productReference = 82B6353F95C7D025E660DC4D /* CosmicCalendarMacWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		D718DFE1AF2F12D37CB27CC9 /* CosmicCalendarWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D795BAFC5AAF1627A419CA98 /* Build configuration list for PBXNativeTarget "CosmicCalendarWatchWidgets" */;
+			buildPhases = (
+				D8625146A5B420447C7800D2 /* Sources */,
+				2863465F4AF0CD77651008E1 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CosmicCalendarWatchWidgets;
+			packageProductDependencies = (
+				9F5A4438FAAB62BE1645383A /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarWatchWidgets;
+			productReference = CEF88A5C91DC280EB2D1D884 /* CosmicCalendarWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E5FE17BB6E6B1EA3DE8D9AEC /* CosmicCalendarVision */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E4FB771EA5BA94E5BA90B038 /* Build configuration list for PBXNativeTarget "CosmicCalendarVision" */;
+			buildPhases = (
+				84EC71DD119B3DB0CC9DAFAA /* Sources */,
+				699BF534378CDA474E758BE3 /* Frameworks */,
+				2C778D207DA1F52D832282F4 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6317C92D0FD0FE90D047F55E /* PBXTargetDependency */,
+			);
+			name = CosmicCalendarVision;
+			packageProductDependencies = (
+				F5C0E91D9431FEB90AD67F81 /* CosmicCalendarCore */,
+			);
+			productName = CosmicCalendarVision;
+			productReference = 25AB367E66A9D7C6DB214959 /* CosmicCalendarVision.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		874A2EB87A777FDF28FC6A5C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					32ADB41DD555189DF07EB470 = {
+						DevelopmentTeam = "";
+					};
+					41E54B492640C4D2D61EFE56 = {
+						DevelopmentTeam = "";
+					};
+					58B20BDB5F74CA76ABDAA37D = {
+						DevelopmentTeam = "";
+					};
+					65BC582BE57995ACB68BF712 = {
+						DevelopmentTeam = "";
+					};
+					80B92B4F04CF53A1EF858123 = {
+						DevelopmentTeam = "";
+					};
+					90540CA73A970C89AD99CA94 = {
+						DevelopmentTeam = "";
+					};
+					D718DFE1AF2F12D37CB27CC9 = {
+						DevelopmentTeam = "";
+					};
+					E5FE17BB6E6B1EA3DE8D9AEC = {
+						DevelopmentTeam = "";
+					};
+				};
+			};
+			buildConfigurationList = BE89F0BC60D9FA6872CDCE81 /* Build configuration list for PBXProject "CosmicCalendar" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 591044E8A0624BB61B42030A;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				20117F65E01C02CC03BACE51 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = DA856011B9E7F9290A8F9ECA /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				80B92B4F04CF53A1EF858123 /* CosmicCalendarPhone */,
+				41E54B492640C4D2D61EFE56 /* CosmicCalendarPhoneWidgets */,
+				32ADB41DD555189DF07EB470 /* CosmicCalendarMac */,
+				90540CA73A970C89AD99CA94 /* CosmicCalendarMacWidgets */,
+				65BC582BE57995ACB68BF712 /* CosmicCalendarWatch */,
+				D718DFE1AF2F12D37CB27CC9 /* CosmicCalendarWatchWidgets */,
+				E5FE17BB6E6B1EA3DE8D9AEC /* CosmicCalendarVision */,
+				58B20BDB5F74CA76ABDAA37D /* CosmicCalendarVisionWidgets */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		10E1603FAEF13AF17AE3C70C /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D3C42597790DFA6148E0CDB8 /* ContentView.swift in Sources */,
+				10864AAF6A16FF48E58BD802 /* CosmicCalendarApp.swift in Sources */,
+				1DA4BE4876BA570E81012D7D /* CosmicLocationStore.swift in Sources */,
+				420E2870CDC0219195CBEC75 /* CosmicSkyView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		84EC71DD119B3DB0CC9DAFAA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9EC7494928BD7BC0AF10D27C /* ContentView.swift in Sources */,
+				FB1180805A4D163028093CFE /* CosmicCalendarApp.swift in Sources */,
+				E55616C869CD5C1A8871B47B /* CosmicLocationStore.swift in Sources */,
+				CDB5C79C92E7952079B72DF0 /* CosmicSkyView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AF283DC304E43DA596A13FDE /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1FA61D5BD8B4FC243B200BCA /* ContentView.swift in Sources */,
+				7F7156B570DFEFEA6877595D /* CosmicCalendarApp.swift in Sources */,
+				C9AE2B3115F0E6FDA48FE9E5 /* CosmicLocationStore.swift in Sources */,
+				2AB65C9E77F6DFB54B8F5AA5 /* CosmicSkyView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B26F4D9B41C143B2AC658718 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				170C453DD5A86D4B879A326E /* ContentView.swift in Sources */,
+				A201A4F3C74B985426206DF7 /* CosmicCalendarApp.swift in Sources */,
+				93348B2F64A22EE765074274 /* CosmicLocationStore.swift in Sources */,
+				3625894725D567AC3EB47FC7 /* CosmicSkyView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D8625146A5B420447C7800D2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3B34562B5DD0F74723C710D3 /* CosmicCalendarWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E1DCD7DFC62E26CB05890D95 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3A6C5C0E82360821F534EF37 /* CosmicCalendarWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E5133794853CCADA27FA3FEF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1B64A82399CA7B0E2C454AA5 /* CosmicCalendarWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E86422AA2A07285D57112FD9 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				63A9EAD59875A56763639240 /* CosmicCalendarWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2C4883D26A077D38404558E5 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 90540CA73A970C89AD99CA94 /* CosmicCalendarMacWidgets */;
+			targetProxy = AEDD307C36EA4B462EE706C8 /* PBXContainerItemProxy */;
+		};
+		2DA61481D622C1EF12386331 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 41E54B492640C4D2D61EFE56 /* CosmicCalendarPhoneWidgets */;
+			targetProxy = BC451C441A1C5E49E80FB687 /* PBXContainerItemProxy */;
+		};
+		6317C92D0FD0FE90D047F55E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 58B20BDB5F74CA76ABDAA37D /* CosmicCalendarVisionWidgets */;
+			targetProxy = 899315D39ABDA9E8674D39A8 /* PBXContainerItemProxy */;
+		};
+		9029A2827E4618946A40A9DB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D718DFE1AF2F12D37CB27CC9 /* CosmicCalendarWatchWidgets */;
+			targetProxy = 49005BC72688D566B30D6F08 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		126039451856637E63AFB934 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		148A881AF99B9405E543683E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.vision;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Debug;
+		};
+		1A40F6CCCA91F30F69828295 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.watch.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
+		46A7D7B6345F8B6153A9EEAF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.mac;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		4B5127E50CD9499993911775 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4C9204C3293EE846555F1029 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.mac.widgets;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		5851725B3D5D33E176BD44A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.watch;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Release;
+		};
+		5C6F3E7829D9F627C966963A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.vision;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Release;
+		};
+		5C98248011572362838A697F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.watch;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
+		5DEE102B9CE65CFB4C5854CE /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.watch.widgets;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+			};
+			name = Debug;
+		};
+		7CFE22AF7F8BEB408854C08D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		8BAD53CCFC6656EB2D30923A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				XROS_DEPLOYMENT_TARGET = 1.0;
+			};
+			name = Debug;
+		};
+		9BB131E25012D6AFCB0A4C51 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.vision.widgets;
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Release;
+		};
+		A04D85E46DDD48B06EB7DDA3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = "";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 0.1.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+				XROS_DEPLOYMENT_TARGET = 1.0;
+			};
+			name = Release;
+		};
+		BE3FE665C8EEB13437115A4A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/CosmicCalendar.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Your location positions the Sun, Moon, and Milky Way relative to your horizon. Coordinates remain on this device.";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.mac;
+				PRODUCT_NAME = "Cosmic Calendar";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		D837948395720F3DDF14035E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.mac.widgets;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		F534D3F78610F48123FCC5E1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.vision.widgets;
+				SDKROOT = xros;
+				TARGETED_DEVICE_FAMILY = 7;
+			};
+			name = Debug;
+		};
+		F93D610FBC315CB34D89429E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widgets/CosmicCalendarWidget.entitlements;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.chensational.cosmiccalendar.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		42DC293B1B989237DD804C00 /* Build configuration list for PBXNativeTarget "CosmicCalendarMacWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D837948395720F3DDF14035E /* Debug */,
+				4C9204C3293EE846555F1029 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		5074D62F342BECF2D94E2249 /* Build configuration list for PBXNativeTarget "CosmicCalendarMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				46A7D7B6345F8B6153A9EEAF /* Debug */,
+				BE3FE665C8EEB13437115A4A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		858AB58C3A18BB722361B033 /* Build configuration list for PBXNativeTarget "CosmicCalendarPhone" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				126039451856637E63AFB934 /* Debug */,
+				7CFE22AF7F8BEB408854C08D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		911EEB6E56514F15DA684065 /* Build configuration list for PBXNativeTarget "CosmicCalendarWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5C98248011572362838A697F /* Debug */,
+				5851725B3D5D33E176BD44A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF006D92D7E886E07569FEDF /* Build configuration list for PBXNativeTarget "CosmicCalendarVisionWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F534D3F78610F48123FCC5E1 /* Debug */,
+				9BB131E25012D6AFCB0A4C51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		BE89F0BC60D9FA6872CDCE81 /* Build configuration list for PBXProject "CosmicCalendar" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8BAD53CCFC6656EB2D30923A /* Debug */,
+				A04D85E46DDD48B06EB7DDA3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D795BAFC5AAF1627A419CA98 /* Build configuration list for PBXNativeTarget "CosmicCalendarWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5DEE102B9CE65CFB4C5854CE /* Debug */,
+				1A40F6CCCA91F30F69828295 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E4FB771EA5BA94E5BA90B038 /* Build configuration list for PBXNativeTarget "CosmicCalendarVision" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				148A881AF99B9405E543683E /* Debug */,
+				5C6F3E7829D9F627C966963A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		E5DE7EF93626FD934B14EFF1 /* Build configuration list for PBXNativeTarget "CosmicCalendarPhoneWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4B5127E50CD9499993911775 /* Debug */,
+				F93D610FBC315CB34D89429E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		20117F65E01C02CC03BACE51 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		027FDA06440B6AFE63CB513B /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		0AC15374C1CEF38F7C19E521 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		1F91857C101D3671C3071031 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		24788084203483DEF4D577A0 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		64D0171C2672FC4E9355DC54 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		8755707C4EB25C62C790BD87 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		9F5A4438FAAB62BE1645383A /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+		F5C0E91D9431FEB90AD67F81 /* CosmicCalendarCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = CosmicCalendarCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 874A2EB87A777FDF28FC6A5C /* Project object */;
+}

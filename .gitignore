@@ -1,0 +1,9 @@
+node_modules/
+dist/
+site/
+coverage/
+.DS_Store
+.swiftpm/
+apple/.build/
+*.xcuserstate
+DerivedData/

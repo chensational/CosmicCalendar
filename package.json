@@ -1,0 +1,59 @@
+{
+  "name": "@chensational/cosmic-calendar",
+  "version": "0.1.0",
+  "private": false,
+  "description": "A location-aware cosmic calendar for React and Apple widgets.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "main": "./dist/cosmic-calendar.cjs",
+  "module": "./dist/cosmic-calendar.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/cosmic-calendar.js",
+      "require": "./dist/cosmic-calendar.cjs"
+    },
+    "./styles.css": "./dist/cosmic-calendar.css"
+  },
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build:demo": "vite build",
+    "build:lib": "vite build --config vite.lib.config.ts && tsc -p tsconfig.lib.json --emitDeclarationOnly",
+    "build": "npm run typecheck && npm test && npm run build:demo && npm run build:lib",
+    "preview": "vite preview",
+    "apple:test": "cd apple && swift build && swift run CosmicCalendarCoreVerifier",
+    "ephemeris:update": "node scripts/updateSatelliteEphemeris.mjs"
+  },
+  "dependencies": {
+    "astronomy-engine": "2.1.19",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "6.1.0",
+    "jsdom": "^26.1.0",
+    "typescript": "7.0.2",
+    "vite": "8.2.2",
+    "vitest": "4.1.11"
+  }
+}
