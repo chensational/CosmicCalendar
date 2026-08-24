@@ -11,7 +11,8 @@
   "files": [
     "dist",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "NOTICE"
   ],
   "main": "./dist/cosmic-calendar.cjs",
   "module": "./dist/cosmic-calendar.js",
@@ -37,7 +38,8 @@
     "ephemeris:update": "node scripts/updateSatelliteEphemeris.mjs",
     "stars:update": "node scripts/updateBrightStarCatalog.mjs",
     "moon:update": "python3 scripts/updateMoonAlbedo.py",
-    "sun:update": "python3 scripts/updateSolarImage.py"
+    "sun:update": "python3 scripts/updateSolarImage.py",
+    "cosmic-flow:update": "node scripts/updateCosmicFlowCatalog.mjs"
   },
   "dependencies": {
     "astronomy-engine": "2.1.19",

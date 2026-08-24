@@ -6,6 +6,8 @@ import {
   nextAdaptiveRenderQuality,
   wheelDeltaToScaleStep,
 } from '../core/interaction';
+import { UNIVERSE_AGE_YEARS } from '../core/constants';
+import type { CosmicFlowGroup } from '../core/cosmicFlowModel';
 import type { HorizonSnapshot, LunarHorizonSnapshot, SolarSystemSnapshot, VisibleStar } from '../core/types';
 import type { SolarObservation } from '../hooks/useSolarObservation';
 import { renderCosmicFrame } from './canvasRenderer';
@@ -16,6 +18,7 @@ export interface CosmicCanvasProps {
   solar: SolarSystemSnapshot;
   solarObservation?: SolarObservation;
   stars: readonly VisibleStar[];
+  cosmicFlowGroups?: readonly CosmicFlowGroup[];
   scalePosition: number;
   cosmicAgeYears: number;
   live: boolean;
@@ -29,6 +32,7 @@ export function CosmicCanvas({
   solar,
   solarObservation,
   stars,
+  cosmicFlowGroups,
   scalePosition,
   cosmicAgeYears,
   live,
@@ -38,12 +42,12 @@ export function CosmicCanvas({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const targetScaleRef = useRef(scalePosition);
   const displayScaleRef = useRef(scalePosition);
-  const frameRef = useRef({ horizon, lunar, solar, solarObservation, stars, cosmicAgeYears, live, reducedMotion });
+  const frameRef = useRef({ horizon, lunar, solar, solarObservation, stars, cosmicFlowGroups, cosmicAgeYears, live, reducedMotion });
   const requestRenderRef = useRef<() => void>(() => undefined);
   const onWheelRef = useRef(onWheel);
 
   targetScaleRef.current = scalePosition;
-  frameRef.current = { horizon, lunar, solar, solarObservation, stars, cosmicAgeYears, live, reducedMotion };
+  frameRef.current = { horizon, lunar, solar, solarObservation, stars, cosmicFlowGroups, cosmicAgeYears, live, reducedMotion };
   onWheelRef.current = onWheel;
 
   useEffect(() => {
@@ -103,9 +107,13 @@ export function CosmicCanvas({
       if (!visible || !pageVisible) return;
       const isTransitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
       const galaxyReplayIsActive = displayScaleRef.current > 1.5 && displayScaleRef.current < 2.5;
+      const cosmicTraceIsActive = displayScaleRef.current > 2.5 &&
+        Math.abs(frameRef.current.cosmicAgeYears - UNIVERSE_AGE_YEARS) <= 1e8;
       const continuousFramesPerSecond = galaxyReplayIsActive
         ? Math.min(8, quality.atmosphericFramesPerSecond)
-        : quality.atmosphericFramesPerSecond;
+        : cosmicTraceIsActive
+          ? Math.min(6, quality.atmosphericFramesPerSecond)
+          : quality.atmosphericFramesPerSecond;
       const frameIntervalMilliseconds = isTransitioning
         ? transitionFrameIntervalMilliseconds
         : Math.max(
@@ -118,9 +126,12 @@ export function CosmicCanvas({
       }
       const state = frameRef.current;
       const deltaSeconds = lastAnimationAt ? Math.min((timestamp - lastAnimationAt) / 1_000, 0.1) : 1 / 60;
-      displayScaleRef.current = state.reducedMotion
+      const nextDisplayScale = state.reducedMotion
         ? targetScaleRef.current
         : dampedValue(displayScaleRef.current, targetScaleRef.current, deltaSeconds);
+      displayScaleRef.current = Math.abs(targetScaleRef.current - nextDisplayScale) <= 0.0005
+        ? targetScaleRef.current
+        : nextDisplayScale;
       if (backingResolutionDirty) applyBackingResolution();
       lastAnimationAt = timestamp;
       lastRenderedAt = timestamp;
@@ -143,7 +154,9 @@ export function CosmicCanvas({
       adoptQuality(nextAdaptiveRenderQuality(quality, renderMilliseconds));
       const transitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
       const sceneHasContinuousMotion = displayScaleRef.current < 0.5 ||
-        (displayScaleRef.current > 1.5 && displayScaleRef.current < 2.5);
+        (displayScaleRef.current > 1.5 && displayScaleRef.current < 2.5) ||
+        (displayScaleRef.current > 2.5 &&
+          Math.abs(state.cosmicAgeYears - UNIVERSE_AGE_YEARS) <= 1e8);
       if (visible && !state.reducedMotion && (transitioning || sceneHasContinuousMotion)) {
         animationFrame = window.requestAnimationFrame(draw);
       }
@@ -213,7 +226,7 @@ export function CosmicCanvas({
 
   useEffect(() => {
     requestRenderRef.current();
-  }, [cosmicAgeYears, horizon, live, lunar, reducedMotion, scalePosition, solar, solarObservation, stars]);
+  }, [cosmicAgeYears, cosmicFlowGroups, horizon, live, lunar, reducedMotion, scalePosition, solar, solarObservation, stars]);
 
   return (
     <canvas

@@ -17,7 +17,7 @@ This ledger prevents completion from being inferred from a build alone.
 | Mercury precession | JPL secular perihelion + 42.98″/century GR excess | Century-rate unit test | Verified |
 | Sun location and bob relative to Galactic core | 8.249 kpc, +20.8 pc; 224.2/163.2/87.8 Myr orbital, radial, and vertical mean periods | endpoint/period/oscillation tests + published source ledger | Verified as bounded mean model |
 | Sun birth-to-present trail | Animated Galactic replay with epicycle and vertical velocity; dashed/faded beyond 800 Myr | endpoint, bounds, uncertainty and browser-animation tests | Implemented; exact 4.567 Gyr backtrace is scientifically unavailable |
-| Milky Way toward Great Attractor with expansion/Big Bang history | Laniākea flow field, expansion shells, explicit non-worldline label | Tully et al. source + non-claim audit | Implemented as illustrative reconstruction |
+| Milky Way in local cosmic flow with expansion/Big Bang history | Published CF4 group slice; probabilistic Shapley/Ophiuchus basin associations; flat radiation+matter+Λ scale-factor reference; explicit non-worldline labels | pinned catalog hash/count, basin/core/expansion tests, browser animation audit | Verified as present-day reconstruction plus labeled background model; no historical flow is claimed |
 | Main animation and four scale sub-animations | Main canvas + scale rail | React production build and runtime audit | Implemented |
 | Smooth scale transitions on scroll | normalized/capped native wheel input + spring target/crossfade canvas | interaction unit tests and browser wheel-event audit | Verified |
 | Boundary fast-forward/rewind to heat death/inflation | boundary wheel logic + logarithmic epoch control | Timeline unit tests | Verified |

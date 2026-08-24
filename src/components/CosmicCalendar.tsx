@@ -15,6 +15,7 @@ import { useObserverLocation } from '../hooks/useObserverLocation';
 import { useBrightStarCatalog } from '../hooks/useBrightStarCatalog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { useSolarObservation } from '../hooks/useSolarObservation';
+import { useCosmicFlowCatalog } from '../hooks/useCosmicFlowCatalog';
 import { getVisibleStars } from '../core/stars';
 import { CosmicCanvas } from './CosmicCanvas';
 
@@ -29,7 +30,7 @@ const SCALES: readonly { key: CosmicScale; short: string; title: string; descrip
   { key: 'horizon', short: '01', title: 'Earth ↔ Moon', description: 'Your sky & Tranquility Base' },
   { key: 'solar-system', short: '02', title: 'Solar system', description: 'Planets, light & satellites' },
   { key: 'milky-way', short: '03', title: 'Milky Way', description: 'The Sun’s Galactic trail' },
-  { key: 'universe', short: '04', title: 'Laniākea', description: 'Expansion & cosmic flow' },
+  { key: 'universe', short: '04', title: 'Cosmic flow', description: 'CF4 basin probabilities' },
 ];
 
 function classNames(...values: Array<string | false | undefined>) {
@@ -123,6 +124,7 @@ export function CosmicCalendar({
   const [locationOpen, setLocationOpen] = useState(false);
   const reducedMotion = useReducedMotion();
   const starCatalog = useBrightStarCatalog();
+  const cosmicFlowGroups = useCosmicFlowCatalog(scalePosition > 2.2);
   const { location, setLocation, requestDeviceLocation, error } = useObserverLocation(initialLocation);
 
   useEffect(() => {
@@ -228,6 +230,7 @@ export function CosmicCalendar({
             solar={solar}
             solarObservation={solarObservation}
             stars={stars}
+            cosmicFlowGroups={cosmicFlowGroups}
             scalePosition={scalePosition}
             cosmicAgeYears={cosmicAgeYears}
             live={live}

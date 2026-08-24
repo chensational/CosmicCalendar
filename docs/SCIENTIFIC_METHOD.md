@@ -103,15 +103,21 @@ The face-on canvas is a structural inference, not a photograph from outside the 
 
 The birth-to-present Solar trail now combines the measured current radius/height with the probabilistic model's azimuthal, radial-epicycle, and vertical periods. Present radial and vertical speeds of 10 and 7 km/s set bounded harmonic amplitudes, so the replay terminates exactly at R = 8.249 kpc and Z = +20.8 pc rather than using arbitrary screen bobbing. The cited orbit study finds the path becomes totally unpredictable within about 800 Myr because Galactic-potential uncertainty dominates. The UI therefore dashes and fades the older mean path while retaining it as the explicitly requested narrative replay; it does not claim a recoverable 4.567-billion-year worldline.
 
-## Laniākea, Great Attractor, and expansion
+## Cosmicflows-4, probabilistic basins, and expansion
 
-The flow field is based conceptually on the peculiar-velocity basin definition in Tully et al., [“The Laniakea supercluster of galaxies”](https://www.nature.com/articles/nature13674). That reconstruction removes mean Hubble expansion and maps present peculiar-velocity flow. It does **not** provide a measured Milky Way path back to the Big Bang.
+Tully et al.'s 2014 [Laniākea paper](https://arxiv.org/abs/1409.0880) introduced a watershed definition based on present peculiar-velocity flow after removing mean Hubble expansion and long-range flow. The newer Cosmicflows-4 probabilistic reconstruction materially changes the interpretation. [Valade et al.](https://arxiv.org/abs/2409.17261) find the Ophiuchus/Laniākea basin in 62% of realizations, but place the Milky Way with it only 39% of the time (38% by automated sink clustering). The Milky Way is associated with the Shapley basin 58% of the time by inspected nearby sinks, or 48% by the automated aggregate. The interface therefore no longer renders one certain Great Attractor destination.
 
-The canvas therefore combines:
+The plotted point field comes from the complete 38,053-group machine-readable Table 4 of [Cosmicflows-4](https://doi.org/10.3847/1538-4357/ac94d8), distributed as [CDS VizieR J/ApJ/944/94](https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJ/944/94). `npm run cosmic-flow:update` hash-pins that source, selects the 3,800 groups inside `−180 ≤ SGX ≤ 80`, `−85 ≤ SGY ≤ 120`, and `|SGZ| ≤ 10 h⁻¹ Mpc`, then retains a deterministic hash-ranked 1,900-point display sample. Published Cartesian “velocity units” are divided by 100 to obtain `h⁻¹ Mpc`. Blue/red point color is the catalog's negative/positive **line-of-sight** peculiar velocity; it is not a reconstructed two-dimensional arrow.
 
-- expanding comoving shells for the background cosmology;
-- present-day stylized Laniākea streamlines toward the Great Attractor region;
-- a gold narrative trail whose caption explicitly says it is not a unique Big-Bang worldline.
+Five basin markers reproduce Valade et al. Extended Data Table 2 core SGX/SGY positions, one-sigma coordinate errors, existence probabilities, and mean volumes. Dashed ellipses are the reported SGX/SGY errors. Circle **area** is proportional to mean basin volume; it is not the measured basin boundary. The two moving dashed Milky Way links encode the Table 1 association alternatives. Their phase is only a field-tracing cue—it is not velocity, a particle path, or a Big-Bang-to-present worldline. The paper explicitly notes that particles traverse only a small fraction of a present-day streamline over the age of the Universe.
+
+At non-present timeline positions the CF4 map is dimmed rather than falsely evolved. A background scale-factor reference integrates
+
+```text
+d ln(a) / dt = H₀ sqrt(Ωᵣ a⁻⁴ + Ωₘ a⁻³ + ΩΛ)
+```
+
+with `H₀ = 67.4 km s⁻¹ Mpc⁻¹`, `Ωₘ = 0.315`, `Ωᵣ = 9.2×10⁻⁵`, flat closure, and `a = 1` at 13.8 Gyr. The main parameters follow [Planck 2018](https://arxiv.org/abs/1807.06209). The far-future branch uses the stable matter+Λ closed form. Before recombination—and especially at the inflation anchor—this is only a background extrapolation; the UI explicitly says it is not an inflation model. No historical or future CF4 velocity field is claimed.
 
 ## Cosmic timeline
 
@@ -149,5 +155,5 @@ Do not remove these qualifications from downstream UI:
 - planetary ephemeris validity interval;
 - satellite `model` discriminator;
 - “modeled,” “present-rate-equivalent,” or equivalent wording for formation-age distance totals;
-- “not a unique Big-Bang worldline” for the Laniākea trail;
+- “not velocity, a particle path, or a Big-Bang worldline” for the probabilistic cosmic-flow links;
 - heat death as an assumed scenario.

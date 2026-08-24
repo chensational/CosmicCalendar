@@ -4,7 +4,18 @@ import {
   SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS,
   SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC,
   SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS,
+  UNIVERSE_AGE_YEARS,
 } from '../core/constants';
+import {
+  MILKY_WAY_BASIN_ASSOCIATIONS,
+  PROBABILISTIC_BASIN_CORES,
+  flatLambdaCdmLog10ScaleFactor,
+  formatRelativeScaleFactor,
+  type CosmicFlowGroup,
+} from '../core/cosmicFlowModel';
+import {
+  CF4_GROUP_SLICE_AVAILABLE_COUNT,
+} from '../data/cosmicFlowMetadata';
 import {
   GALACTIC_BAR_ANGLE_DEGREES,
   GALACTIC_BAR_HALF_LENGTH_KPC,
@@ -67,6 +78,7 @@ export interface CanvasFrame {
   solar: SolarSystemSnapshot;
   solarObservation?: SolarObservation;
   stars: readonly VisibleStar[];
+  cosmicFlowGroups?: readonly CosmicFlowGroup[];
   cosmicAgeYears: number;
   reducedMotion: boolean;
 }
@@ -1760,83 +1772,401 @@ function drawGalaxyScene(frame: CanvasFrame) {
   }
 }
 
-function drawUniverseScene(frame: CanvasFrame) {
-  const { context, width, height, elapsedSeconds, cosmicAgeYears } = frame;
-  const centerX = width * 0.46;
-  const centerY = height * 0.5;
-  const maxRadius = Math.min(width, height) * 0.56;
-  const background = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, maxRadius);
-  background.addColorStop(0, '#1b1433');
-  background.addColorStop(0.45, '#080b1c');
-  background.addColorStop(1, '#02030a');
+const COSMIC_SGX_MIN = -180;
+const COSMIC_SGX_MAX = 80;
+const COSMIC_SGY_MIN = -85;
+const COSMIC_SGY_MAX = 120;
+
+interface CosmicProjectedPoint {
+  x: number;
+  y: number;
+}
+
+interface CosmicAssociationPath {
+  basinKey: 'shapley' | 'ophiuchus';
+  path: Path2D;
+  color: string;
+  inspectedProbabilityPercent: number;
+  automaticProbabilityPercent: number;
+}
+
+interface CosmicRenderCache {
+  sourceGroupCount: number;
+  plotLeft: number;
+  plotTop: number;
+  plotRight: number;
+  plotBottom: number;
+  groupPaths: readonly Path2D[];
+  corePoints: readonly {
+    key: string;
+    name: string;
+    point: CosmicProjectedPoint;
+    sigmaX: number;
+    sigmaY: number;
+    bubbleRadius: number;
+    probability: number;
+    volume: number;
+    color: string;
+  }[];
+  milkyWay: CosmicProjectedPoint;
+  associations: readonly CosmicAssociationPath[];
+}
+
+const cosmicRenderCache = new Map<string, CosmicRenderCache>();
+const cosmicStaticSurfaceCache = new Map<string, SurfaceCanvas>();
+
+function projectCosmicPoint(
+  sgx: number,
+  sgy: number,
+  plotLeft: number,
+  plotTop: number,
+  plotRight: number,
+  plotBottom: number,
+): CosmicProjectedPoint {
+  return {
+    x: plotLeft + (sgx - COSMIC_SGX_MIN) / (COSMIC_SGX_MAX - COSMIC_SGX_MIN) *
+      (plotRight - plotLeft),
+    y: plotTop + (COSMIC_SGY_MAX - sgy) / (COSMIC_SGY_MAX - COSMIC_SGY_MIN) *
+      (plotBottom - plotTop),
+  };
+}
+
+function buildCosmicRenderCache(
+  width: number,
+  height: number,
+  groups: readonly CosmicFlowGroup[],
+): CosmicRenderCache {
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}:${groups.length}`;
+  const cached = cosmicRenderCache.get(cacheKey);
+  if (cached) return cached;
+  const plotLeft = 18;
+  const plotTop = Math.min(118, height * 0.22);
+  const plotRight = width - 20;
+  const plotBottom = height - 126;
+  const project = (sgx: number, sgy: number) =>
+    projectCosmicPoint(sgx, sgy, plotLeft, plotTop, plotRight, plotBottom);
+
+  // Blue is negative and red is positive radial peculiar velocity, following
+  // the sign convention of the published CF4 catalog—not an inferred 2D vector.
+  const groupPaths = Array.from({ length: 6 }, () => new Path2D());
+  for (const group of groups) {
+    const point = project(group.sgx, group.sgy);
+    const magnitudeBucket = Math.min(2, Math.floor(Math.abs(group.peculiarVelocityKmPerSecond) / 500));
+    const signBucket = group.peculiarVelocityKmPerSecond >= 0 ? 3 : 0;
+    const radius = 0.42 + magnitudeBucket * 0.18;
+    const path = groupPaths[signBucket + magnitudeBucket];
+    path.moveTo(point.x + radius, point.y);
+    path.arc(point.x, point.y, radius, 0, TAU);
+  }
+
+  const scaleX = (plotRight - plotLeft) / (COSMIC_SGX_MAX - COSMIC_SGX_MIN);
+  const scaleY = (plotBottom - plotTop) / (COSMIC_SGY_MAX - COSMIC_SGY_MIN);
+  const corePoints = PROBABILISTIC_BASIN_CORES.map((basin) => ({
+    key: basin.key,
+    name: basin.name,
+    point: project(basin.sgx, basin.sgy),
+    sigmaX: basin.sigmaSgx * scaleX,
+    sigmaY: basin.sigmaSgy * scaleY,
+    bubbleRadius: Math.sqrt(basin.volumeMillionCubicHInverseMpc / 7.02) * 21,
+    probability: basin.existenceProbabilityPercent,
+    volume: basin.volumeMillionCubicHInverseMpc,
+    color: basin.color,
+  }));
+  const milkyWay = project(0, 0);
+  const associations = (['shapley', 'ophiuchus'] as const).map((basinKey) => {
+    const basin = corePoints.find((candidate) => candidate.key === basinKey)!;
+    const association = MILKY_WAY_BASIN_ASSOCIATIONS.find((candidate) =>
+      candidate.basinKey === basinKey)!;
+    const direction = basinKey === 'shapley' ? -1 : 1;
+    const controlOffset = Math.min(52, (plotBottom - plotTop) * 0.17) * direction;
+    const path = new Path2D();
+    path.moveTo(milkyWay.x, milkyWay.y);
+    path.bezierCurveTo(
+      milkyWay.x + (basin.point.x - milkyWay.x) * 0.28,
+      milkyWay.y + controlOffset,
+      milkyWay.x + (basin.point.x - milkyWay.x) * 0.72,
+      basin.point.y - controlOffset * 0.35,
+      basin.point.x,
+      basin.point.y,
+    );
+    return {
+      basinKey,
+      path,
+      color: basin.color,
+      inspectedProbabilityPercent: association.inspectedProbabilityPercent,
+      automaticProbabilityPercent: association.automaticProbabilityPercent!,
+    };
+  });
+
+  const built = {
+    sourceGroupCount: groups.length,
+    plotLeft,
+    plotTop,
+    plotRight,
+    plotBottom,
+    groupPaths,
+    corePoints,
+    milkyWay,
+    associations,
+  };
+  cosmicRenderCache.set(cacheKey, built);
+  if (cosmicRenderCache.size > 4) {
+    const oldest = cosmicRenderCache.keys().next().value;
+    if (oldest) cosmicRenderCache.delete(oldest);
+  }
+  return built;
+}
+
+function drawCosmicStaticLayer(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  model: CosmicRenderCache,
+) {
+  const background = context.createRadialGradient(
+    model.milkyWay.x,
+    model.milkyWay.y,
+    0,
+    width * 0.5,
+    height * 0.48,
+    Math.max(width, height) * 0.72,
+  );
+  background.addColorStop(0, '#10162b');
+  background.addColorStop(0.52, '#060916');
+  background.addColorStop(1, '#01030a');
   context.fillStyle = background;
   context.fillRect(0, 0, width, height);
-  drawStars(context, width, height, elapsedSeconds);
-
-  for (let ring = 1; ring <= 7; ring += 1) {
-    context.strokeStyle = `rgba(132, 157, 218, ${0.19 - ring * 0.015})`;
-    context.lineWidth = 1;
-    context.beginPath();
-    context.ellipse(centerX, centerY, maxRadius * ring / 7, maxRadius * 0.52 * ring / 7, -0.15, 0, TAU);
-    context.stroke();
-  }
-
-  const attractorX = width * 0.78;
-  const attractorY = height * 0.34;
-  drawGlow(context, attractorX, attractorY, 26, 'rgba(199, 111, 199, .42)');
-  context.fillStyle = '#d8a3d5';
-  context.beginPath();
-  context.arc(attractorX, attractorY, 5, 0, TAU);
-  context.fill();
-  context.fillStyle = '#d8c1dd';
-  context.font = '600 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-  context.fillText('GREAT ATTRACTOR REGION', attractorX + 12, attractorY - 7);
 
   context.save();
-  context.strokeStyle = 'rgba(122, 209, 210, .38)';
-  context.lineWidth = 1.2;
-  for (let stream = 0; stream < 26; stream += 1) {
-    const startX = hashUnit(`flow-x-${stream}`) * width;
-    const startY = hashUnit(`flow-y-${stream}`) * height;
-    const bend = (hashUnit(`flow-b-${stream}`) - 0.5) * height * 0.35;
+  context.strokeStyle = 'rgba(129, 151, 194, .11)';
+  context.lineWidth = 0.7;
+  context.fillStyle = 'rgba(150, 169, 204, .54)';
+  context.font = '500 7px ui-monospace, SFMono-Regular, Menlo, monospace';
+  for (let sgx = -150; sgx <= 50; sgx += 50) {
+    const top = projectCosmicPoint(sgx, COSMIC_SGY_MAX, model.plotLeft, model.plotTop, model.plotRight, model.plotBottom);
+    const bottom = projectCosmicPoint(sgx, COSMIC_SGY_MIN, model.plotLeft, model.plotTop, model.plotRight, model.plotBottom);
     context.beginPath();
-    context.moveTo(startX, startY);
-    context.bezierCurveTo(
-      startX + (attractorX - startX) * 0.38,
-      startY + bend,
-      attractorX - width * 0.1,
-      attractorY - bend * 0.2,
-      attractorX,
-      attractorY,
-    );
+    context.moveTo(top.x, top.y);
+    context.lineTo(bottom.x, bottom.y);
     context.stroke();
+    context.fillText(`${sgx}`, bottom.x + 3, bottom.y - 4);
   }
+  for (let sgy = -50; sgy <= 100; sgy += 50) {
+    const left = projectCosmicPoint(COSMIC_SGX_MIN, sgy, model.plotLeft, model.plotTop, model.plotRight, model.plotBottom);
+    const right = projectCosmicPoint(COSMIC_SGX_MAX, sgy, model.plotLeft, model.plotTop, model.plotRight, model.plotBottom);
+    context.beginPath();
+    context.moveTo(left.x, left.y);
+    context.lineTo(right.x, right.y);
+    context.stroke();
+    context.fillText(`${sgy}`, left.x + 3, left.y - 3);
+  }
+  context.fillText('SGX / SGY · h⁻¹ MPC', model.plotRight - 94, model.plotTop + 10);
   context.restore();
 
-  const ageLog = Math.log10(Math.max(cosmicAgeYears, 1e-36));
-  const nowLog = Math.log10(13.8e9);
-  const expansion = clamp((ageLog + 36) / (nowLog + 36), 0.015, 1);
-  const trailEndX = centerX + (attractorX - centerX) * expansion;
-  const trailEndY = centerY + (attractorY - centerY) * expansion;
-  context.strokeStyle = '#f0c97a';
-  context.lineWidth = 2.2;
-  context.beginPath();
-  context.moveTo(centerX, centerY);
-  context.bezierCurveTo(centerX + width * 0.08, centerY + height * 0.1, trailEndX - width * 0.08, trailEndY + height * 0.08, trailEndX, trailEndY);
-  context.stroke();
-  drawGlow(context, trailEndX, trailEndY, 7, 'rgba(255, 205, 116, .7)');
-  context.fillStyle = '#ffdda0';
-  context.beginPath();
-  context.arc(trailEndX, trailEndY, 3.5, 0, TAU);
-  context.fill();
+  const negativeColors = [
+    'rgba(103, 157, 211, .22)',
+    'rgba(93, 168, 229, .36)',
+    'rgba(116, 193, 242, .54)',
+  ];
+  const positiveColors = [
+    'rgba(218, 126, 116, .2)',
+    'rgba(229, 120, 105, .34)',
+    'rgba(242, 148, 121, .52)',
+  ];
+  model.groupPaths.forEach((path, index) => {
+    context.fillStyle = index < 3 ? negativeColors[index] : positiveColors[index - 3];
+    context.fill(path);
+  });
 
-  roundedRect(context, 18, height - 62, Math.min(440, width - 36), 42, 11);
-  context.fillStyle = 'rgba(4, 7, 18, .76)';
+  for (const core of model.corePoints) {
+    context.save();
+    context.strokeStyle = core.color;
+    context.globalAlpha = 0.22 + core.probability / 100 * 0.38;
+    context.lineWidth = 0.9;
+    context.setLineDash([2.5, 3.5]);
+    context.beginPath();
+    context.ellipse(core.point.x, core.point.y, Math.max(2, core.sigmaX), Math.max(2, core.sigmaY), 0, 0, TAU);
+    context.stroke();
+    context.setLineDash([]);
+    context.globalAlpha = 0.055 + core.probability / 100 * 0.055;
+    context.fillStyle = core.color;
+    context.beginPath();
+    context.arc(core.point.x, core.point.y, core.bubbleRadius, 0, TAU);
+    context.fill();
+    context.globalAlpha = 0.9;
+    context.beginPath();
+    context.arc(core.point.x, core.point.y, 2.4, 0, TAU);
+    context.fill();
+    context.restore();
+
+    const labelAbove = core.key === 'south-pole-wall' || core.key === 'perseus';
+    const labelLeft = core.key === 'shapley' || core.key === 'south-pole-wall';
+    context.textAlign = labelLeft ? 'left' : core.key === 'perseus' ? 'right' : 'center';
+    context.fillStyle = core.color;
+    context.font = '600 8px ui-monospace, SFMono-Regular, Menlo, monospace';
+    context.fillText(
+      core.name.toUpperCase(),
+      core.point.x + (labelLeft ? 6 : core.key === 'perseus' ? -6 : 0),
+      core.point.y + (labelAbove ? -core.bubbleRadius - 6 : core.bubbleRadius + 12),
+    );
+    context.fillStyle = 'rgba(183, 197, 217, .68)';
+    context.font = '500 7px ui-monospace, SFMono-Regular, Menlo, monospace';
+    context.fillText(
+      `P ${core.probability}% · V ${core.volume.toFixed(2)}`,
+      core.point.x + (labelLeft ? 6 : core.key === 'perseus' ? -6 : 0),
+      core.point.y + (labelAbove ? -core.bubbleRadius + 4 : core.bubbleRadius + 22),
+    );
+    context.textAlign = 'start';
+  }
+
+  drawGlow(context, model.milkyWay.x, model.milkyWay.y, 7, 'rgba(103, 225, 213, .62)');
+  context.fillStyle = '#85e0d7';
+  context.beginPath();
+  context.arc(model.milkyWay.x, model.milkyWay.y, 3.2, 0, TAU);
   context.fill();
-  context.fillStyle = '#aab9cf';
-  context.font = '500 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-  context.fillText('FLOW FIELD · LANIĀKEA RECONSTRUCTION · NOT A UNIQUE BIG-BANG WORLDLINE', 30, height - 37);
-  context.fillText('COSMIC EXPANSION IS SHOWN IN COMOVING COORDINATES', 30, height - 23);
+  context.fillStyle = 'rgba(171, 236, 229, .92)';
+  context.font = '600 8px ui-monospace, SFMono-Regular, Menlo, monospace';
+  context.fillText('MILKY WAY · SG 0,0,0', model.milkyWay.x + 7, model.milkyWay.y - 6);
+
+  context.fillStyle = 'rgba(164, 181, 207, .72)';
+  context.font = '500 7px ui-monospace, SFMono-Regular, Menlo, monospace';
+  context.fillText('BLUE VPEC < 0', model.plotLeft + 5, model.plotTop + 11);
+  context.fillStyle = 'rgba(225, 151, 137, .72)';
+  context.fillText('RED VPEC > 0', model.plotLeft + 5, model.plotTop + 22);
+}
+
+function cosmicStaticSurface(
+  width: number,
+  height: number,
+  pixelRatio: number,
+  model: CosmicRenderCache,
+): SurfaceCanvas | undefined {
+  const boundedPixelRatio = clamp(pixelRatio, 0.55, 2);
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}:${boundedPixelRatio.toFixed(2)}:${model.sourceGroupCount}`;
+  const cached = cosmicStaticSurfaceCache.get(cacheKey);
+  if (cached) return cached;
+  const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(
+      Math.max(1, Math.round(width * boundedPixelRatio)),
+      Math.max(1, Math.round(height * boundedPixelRatio)),
+    )
+    : Object.assign(document.createElement('canvas'), {
+      width: Math.max(1, Math.round(width * boundedPixelRatio)),
+      height: Math.max(1, Math.round(height * boundedPixelRatio)),
+    });
+  const surfaceContext = surface.getContext('2d') as CanvasRenderingContext2D | null;
+  if (!surfaceContext) return undefined;
+  surfaceContext.setTransform(boundedPixelRatio, 0, 0, boundedPixelRatio, 0, 0);
+  drawCosmicStaticLayer(surfaceContext, width, height, model);
+  cosmicStaticSurfaceCache.set(cacheKey, surface);
+  if (cosmicStaticSurfaceCache.size > 3) {
+    const oldest = cosmicStaticSurfaceCache.keys().next().value;
+    if (oldest) cosmicStaticSurfaceCache.delete(oldest);
+  }
+  return surface;
+}
+
+function drawUniverseScene(frame: CanvasFrame) {
+  const {
+    context,
+    width,
+    height,
+    elapsedSeconds,
+    cosmicAgeYears,
+    cosmicFlowGroups,
+    pixelRatio,
+    reducedMotion,
+  } = frame;
+  const model = buildCosmicRenderCache(width, height, cosmicFlowGroups ?? []);
+  const staticSurface = cosmicStaticSurface(width, height, pixelRatio, model);
+  const presentSnapshot = Math.abs(cosmicAgeYears - UNIVERSE_AGE_YEARS) <= 1e8;
+  context.save();
+  context.globalAlpha = presentSnapshot ? 1 : 0.3;
+  if (staticSurface) context.drawImage(staticSurface, 0, 0, width, height);
+  else drawCosmicStaticLayer(context, width, height, model);
+  context.restore();
+
+  if (presentSnapshot) {
+    context.save();
+    context.lineCap = 'round';
+    for (const association of model.associations) {
+      context.strokeStyle = association.basinKey === 'shapley'
+        ? 'rgba(231, 179, 95, .2)'
+        : 'rgba(201, 139, 201, .2)';
+      context.lineWidth = 3.2;
+      context.setLineDash([]);
+      context.stroke(association.path);
+      context.strokeStyle = association.basinKey === 'shapley'
+        ? 'rgba(241, 193, 109, .9)'
+        : 'rgba(219, 158, 215, .86)';
+      context.lineWidth = 1.15;
+      context.setLineDash([3, 7]);
+      context.lineDashOffset = reducedMotion ? 0 : -elapsedSeconds * 7;
+      context.stroke(association.path);
+    }
+    context.restore();
+
+    context.fillStyle = 'rgba(231, 179, 95, .96)';
+    context.font = '600 8px ui-monospace, SFMono-Regular, Menlo, monospace';
+    context.fillText('58% · 48% AUTO', model.milkyWay.x - 120, model.milkyWay.y - 33);
+    context.fillStyle = 'rgba(213, 153, 211, .95)';
+    context.fillText('39% · 38% AUTO', model.milkyWay.x - 73, model.milkyWay.y + 42);
+  } else {
+    const logScaleFactor = flatLambdaCdmLog10ScaleFactor(cosmicAgeYears);
+    const panelWidth = Math.min(430, width - 36);
+    const panelHeight = width < 560 ? 96 : 88;
+    const panelX = (width - panelWidth) * 0.5;
+    const panelY = Math.max(128, (height - panelHeight) * 0.43);
+    roundedRect(context, panelX, panelY, panelWidth, panelHeight, 12);
+    context.fillStyle = 'rgba(3, 6, 16, .91)';
+    context.fill();
+    context.strokeStyle = 'rgba(118, 205, 199, .28)';
+    context.lineWidth = 1;
+    context.stroke();
+    context.textAlign = 'center';
+    context.fillStyle = '#d9e3ee';
+    context.font = `600 ${width < 560 ? 10 : 11}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.fillText(
+      `SELECTED EPOCH · a/a₀ ≈ ${formatRelativeScaleFactor(logScaleFactor)}`,
+      width * 0.5,
+      panelY + 24,
+    );
+    context.fillStyle = '#aebdd1';
+    context.font = `500 ${width < 560 ? 8 : 9}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.fillText('CF4 IS A PRESENT-DAY VELOCITY RECONSTRUCTION', width * 0.5, panelY + 48);
+    context.fillText('NO HISTORICAL OR FUTURE FLOW TRAJECTORY IS INFERRED', width * 0.5, panelY + 65);
+    context.fillStyle = 'rgba(145, 164, 190, .75)';
+    context.fillText(
+      cosmicAgeYears < 380_000
+        ? 'BACKGROUND EXTRAPOLATION · NOT AN INFLATION MODEL'
+        : 'FLAT RADIATION + MATTER + Λ BACKGROUND REFERENCE',
+      width * 0.5,
+      panelY + 82,
+    );
+    context.textAlign = 'start';
+  }
+
+  const infoY = height - 112;
+  roundedRect(context, 18, infoY, Math.min(690, width - 36), 92, 11);
+  context.fillStyle = 'rgba(4, 7, 18, .84)';
+  context.fill();
+  context.fillStyle = '#aebed3';
+  const compactInfo = width < 650;
+  context.font = `500 ${compactInfo ? 7 : 8}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  const lines = compactInfo
+    ? [
+      `CF4 · ${model.sourceGroupCount || 'LOADING'}/${CF4_GROUP_SLICE_AVAILABLE_COUNT} GROUPS · SGZ ±10 h⁻¹ MPC`,
+      'MW BASIN · SHAPLEY 58% (48 AUTO) · OPHIUCHUS 39% (38 AUTO)',
+      'CORES + 1σ ERRORS EXACT · CIRCLE AREA ∝ MEAN VOLUME',
+      'DASH = ASSOCIATION TRACE · NOT SPEED OR A WORLDLINE',
+    ]
+    : [
+      `COSMICFLOWS-4 · ${model.sourceGroupCount || 'LOADING'} OF ${CF4_GROUP_SLICE_AVAILABLE_COUNT} GROUPS · SGZ ±10 h⁻¹ MPC SLICE · PRESENT-DAY`,
+      'MILKY WAY BASIN · SHAPLEY 58% (48% AUTOMATED) · OPHIUCHUS/LANIĀKEA 39% (38% AUTOMATED)',
+      'CORE POSITIONS + 1σ ERRORS EXACT · CIRCLE AREA ∝ PUBLISHED MEAN BASIN VOLUME',
+      'DASH PHASE TRACES ASSOCIATION TOPOLOGY · NOT VELOCITY, PARTICLE PATH, OR BIG-BANG WORLDLINE',
+    ];
+  lines.forEach((line, index) => context.fillText(line, 30, infoY + 19 + index * 18));
 }
 
 const sceneRenderers = [drawHorizonScene, drawSolarScene, drawGalaxyScene, drawUniverseScene] as const;

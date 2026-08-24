@@ -19,16 +19,18 @@
 - The terrestrial Moon follows the same cache-first pattern. Its real 128×64 LRO luminance map occupies 8 KiB before base64 wrapping; only a roughly 36×36 supersampled disc is shaded on a quantized libration/phase cache miss, then normal frames use one `drawImage`.
 - The present-day Sun uses a disk-cropped 96×96 SDO/HMI JPEG of roughly 2.3 KiB. Pages refreshes it at build time every three hours; it is embedded in the bundle, so no frame-time shading loop or third-party browser request is added. Historical/stale-date procedural solar textures are 4× supersampled, quantized to eight-minute epochs, and retained in a separate 24-entry FIFO cache.
 - The Galactic scene generates its 760 deterministic visual particles, four mean arm guides, seven measured arm segments, and 641-point Solar replay once at module load. Per canvas size these collapse into 12 particle `Path2D` buckets, cached arm/dust paths, and short uncertainty-tiered trail batches. The entire fixed galaxy is then rasterized once into a DPR-aware offscreen surface (three-entry bound); normal frames draw that surface plus the revealed trail. Replay is capped at 8 fps while scale transitions retain the adaptive 18–30 fps tier.
-- No third-party request occurs at runtime. The web demo makes one same-origin static catalog request; the compact SDO frame, JPL satellite seeds, and every astronomy model remain checked in or embedded at build time.
+- The Cosmicflows-4 slice is a packed 15.2 KiB payload decoded only after the outer scale is approached. Its 1,900 published group positions collapse into six peculiar-velocity `Path2D` buckets; the grid, groups, basin cores, uncertainties, and volume encodings are rasterized once into another three-entry DPR-aware offscreen cache. Normal present-day frames draw that surface plus two dash phases at 6 fps. The main library therefore pays only about 3 KiB gzip for the model/UI while the 15.1 KiB gzip catalog stays lazy.
+- No third-party request occurs at runtime. The web demo uses same-origin static/lazy assets; the compact SDO frame, CF4 group slice, JPL satellite seeds, and every astronomy model remain checked in or embedded at build time.
 
 Current production output:
 
 | Artifact | Raw | Gzip |
 | --- | ---: | ---: |
-| React library JS (ESM, including CosmicWatermark export) | ~236 KB | ~82 KB |
+| React library JS (ESM, including CosmicWatermark export) | ~248 KB | ~85.6 KB |
+| Lazy Cosmicflows-4 slice chunk | ~20.9 KB | ~15.1 KB |
 | Lazy star-catalog library chunk | ~218.5 KB | ~140 KB |
 | Component CSS | ~13.5 KB | ~3.5 KB |
-| Demo JS | ~348 KB | ~128 KB |
+| Demo JS | ~358 KB | ~132 KB |
 | Demo star-catalog binary | ~164 KB | n/a |
 
 The inherited `CosmicWatermark` loads Three.js dynamically only when that optional decorative component is mounted; the main calendar stays on Canvas 2D because its vector workload remains comfortably bounded without a WebGL scene graph or texture uploads.
