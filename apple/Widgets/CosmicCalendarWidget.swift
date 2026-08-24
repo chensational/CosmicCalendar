@@ -51,7 +51,15 @@ struct CosmicWidgetView: View {
             ContainerRelativeShape().fill(
                 LinearGradient(colors: [Color(red: 0.04, green: 0.08, blue: 0.16), .black], startPoint: .topLeading, endPoint: .bottomTrailing)
             )
-            #if os(watchOS) || os(iOS)
+            #if os(watchOS)
+            if family == .accessoryCircular {
+                accessoryCircular
+            } else if family == .accessoryInline {
+                Text("☉ \(entry.snapshot.sun.altitudeDegrees, specifier: "%+.0f")° · ◐ \(entry.snapshot.moon.altitudeDegrees, specifier: "%+.0f")°")
+            } else {
+                accessoryRectangular
+            }
+            #elseif os(iOS)
             if family == .accessoryCircular {
                 accessoryCircular
             } else if family == .accessoryInline {
@@ -87,6 +95,7 @@ struct CosmicWidgetView: View {
         }
     }
 
+    #if !os(watchOS)
     private var systemWidget: some View {
         VStack(alignment: .leading, spacing: family == .systemSmall ? 7 : 11) {
             HStack {
@@ -112,6 +121,7 @@ struct CosmicWidgetView: View {
         }
         .padding()
     }
+    #endif
 }
 
 struct CosmicCalendarWidget: Widget {
