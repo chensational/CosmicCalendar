@@ -37,33 +37,46 @@ final class CosmicLocationStore: NSObject, ObservableObject, CLLocationManagerDe
         }
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        authorization = manager.authorizationStatus
-        if authorization == .authorizedAlways || authorization == .authorizedWhenInUse {
-            manager.requestLocation()
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            authorization = status
+            if status == .authorizedAlways || status == .authorizedWhenInUse {
+                self.manager.requestLocation()
+            }
         }
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last else { return }
-        observer = CosmicObserver(
-            latitude: location.coordinate.latitude,
-            longitude: location.coordinate.longitude,
-            elevationMeters: max(0, location.altitude),
-            label: "Your location"
-        )
-        defaults.set(observer.latitude, forKey: "observer.latitude")
-        defaults.set(observer.longitude, forKey: "observer.longitude")
-        defaults.set(observer.elevationMeters, forKey: "observer.elevation")
-        defaults.set(observer.label, forKey: "observer.label")
-        defaults.set(Date().timeIntervalSince1970, forKey: "observer.updatedAt")
-        #if canImport(WidgetKit)
-        WidgetCenter.shared.reloadTimelines(ofKind: "CosmicCalendarWidget")
-        #endif
+        let latitude = location.coordinate.latitude
+        let longitude = location.coordinate.longitude
+        let elevation = max(0, location.altitude)
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            observer = CosmicObserver(
+                latitude: latitude,
+                longitude: longitude,
+                elevationMeters: elevation,
+                label: "Your location"
+            )
+            defaults.set(observer.latitude, forKey: "observer.latitude")
+            defaults.set(observer.longitude, forKey: "observer.longitude")
+            defaults.set(observer.elevationMeters, forKey: "observer.elevation")
+            defaults.set(observer.label, forKey: "observer.label")
+            defaults.set(Date().timeIntervalSince1970, forKey: "observer.updatedAt")
+            #if canImport(WidgetKit)
+            WidgetCenter.shared.reloadTimelines(ofKind: "CosmicCalendarWidget")
+            #endif
+        }
     }
 
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        errorMessage = error.localizedDescription
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        let message = error.localizedDescription
+        Task { @MainActor [weak self] in
+            self?.errorMessage = message
+        }
     }
 }
 
