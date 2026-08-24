@@ -12,6 +12,7 @@ cd apple && xcodegen generate --spec project.yml
 
 - JPL Horizons DE441 Sun fixture from a real topocentric observer.
 - 49-point Milky Way horizon band creation.
+- Reid et al. kinked-arm anchors, widths, four-arm pitch, long-bar geometry, deterministic visual field, and Solar Galactic replay endpoints/uncertainty bounds.
 - Apollo 11 near-side Earth altitude, distance, and angular-size bounds.
 - Nine planets and all 20 selected major satellites.
 - Integrated-vs-JPL-seeded satellite model labeling.

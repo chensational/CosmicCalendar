@@ -5,6 +5,23 @@ import {
   SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC,
   SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS,
 } from '../core/constants';
+import {
+  GALACTIC_BAR_ANGLE_DEGREES,
+  GALACTIC_BAR_HALF_LENGTH_KPC,
+  GALACTIC_DISPLAY_RADIUS_KPC,
+  GALACTIC_MAJOR_ARM_GUIDES,
+  GALACTIC_MEAN_ARM_PITCH_DEGREES,
+  GALAXY_PARTICLE_FIELD,
+  GALACTIC_SPIRAL_SEGMENTS,
+  SOLAR_GALACTIC_TRAIL,
+  SUN_GALACTIC_EPICYCLE_PERIOD_MILLION_YEARS,
+  SUN_GALACTIC_ORBIT_PREDICTABILITY_MILLION_YEARS,
+  galacticArmWidthKpc,
+  majorArmPointAtRadius,
+  sampleSpiralSegment,
+  solarGalacticPositionAtProgress,
+  type GalacticPoint,
+} from '../core/galaxyModel';
 import { clamp, dot, greatCircleBearingRadians, hashUnit, normalize, normalizeDegrees, smoothstep } from '../core/math';
 import {
   lunarReflectance,
@@ -44,6 +61,7 @@ export interface CanvasFrame {
   elapsedSeconds: number;
   realtimeOffsetSeconds: number;
   renderQuality: number;
+  pixelRatio: number;
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
@@ -1335,81 +1353,411 @@ function drawSolarScene(frame: CanvasFrame) {
   context.fillText(`MERCURY GR EXCESS · ${solar.mercuryRelativisticPrecessionArcsecondsPerCentury.toFixed(2)}″ / CENTURY`, 30, height - 65);
 }
 
-function drawGalaxyScene(frame: CanvasFrame) {
-  const { context, width, height, elapsedSeconds } = frame;
-  const centerX = width * 0.5;
-  const centerY = height * 0.5;
-  const radius = Math.min(width, height) * 0.4;
-  const gradient = context.createRadialGradient(centerX, centerY, 4, centerX, centerY, radius * 1.25);
-  gradient.addColorStop(0, '#c9a874');
-  gradient.addColorStop(0.08, '#644f48');
-  gradient.addColorStop(0.55, '#11152d');
-  gradient.addColorStop(1, '#02040c');
-  context.fillStyle = gradient;
+const GALAXY_VIEW_ROTATION_RADIANS = -0.22;
+const GALAXY_PLANE_COMPRESSION = 0.54;
+
+interface GalaxyProjectedPoint {
+  x: number;
+  y: number;
+}
+
+interface GalaxyRenderCache {
+  centerX: number;
+  centerY: number;
+  radius: number;
+  pixelsPerKpc: number;
+  barPath: Path2D;
+  armGuides: readonly { path: Path2D; dustPath: Path2D; width: number }[];
+  measuredSegments: readonly {
+    key: string;
+    name: string;
+    path: Path2D;
+    width: number;
+    label: GalaxyProjectedPoint;
+  }[];
+  particlePaths: readonly Path2D[];
+  trailBatches: readonly {
+    path: Path2D;
+    endProgress: number;
+    uncertainty: number;
+  }[];
+  trailPoints: readonly GalaxyProjectedPoint[];
+}
+
+const galaxyRenderCache = new Map<string, GalaxyRenderCache>();
+
+function projectGalaxyPoint(
+  point: GalacticPoint,
+  centerX: number,
+  centerY: number,
+  pixelsPerKpc: number,
+): GalaxyProjectedPoint {
+  const cosine = Math.cos(GALAXY_VIEW_ROTATION_RADIANS);
+  const sine = Math.sin(GALAXY_VIEW_ROTATION_RADIANS);
+  const rotatedX = point.xKpc * cosine - point.yKpc * sine;
+  const rotatedY = point.xKpc * sine + point.yKpc * cosine;
+  return {
+    x: centerX + rotatedX * pixelsPerKpc,
+    y: centerY + (rotatedY * GALAXY_PLANE_COMPRESSION - point.zKpc * 0.92) * pixelsPerKpc,
+  };
+}
+
+function pathFromGalacticPoints(
+  points: readonly GalacticPoint[],
+  centerX: number,
+  centerY: number,
+  pixelsPerKpc: number,
+): Path2D {
+  const path = new Path2D();
+  points.forEach((point, index) => {
+    const projected = projectGalaxyPoint(point, centerX, centerY, pixelsPerKpc);
+    if (index === 0) path.moveTo(projected.x, projected.y);
+    else path.lineTo(projected.x, projected.y);
+  });
+  return path;
+}
+
+function buildGalaxyRenderCache(width: number, height: number): GalaxyRenderCache {
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}`;
+  const cached = galaxyRenderCache.get(cacheKey);
+  if (cached) return cached;
+  const centerX = width * 0.55;
+  const centerY = height * 0.465;
+  const radius = Math.min(width * 0.34, height * 0.43);
+  const pixelsPerKpc = radius / GALACTIC_DISPLAY_RADIUS_KPC;
+
+  const barAngle = GALACTIC_BAR_ANGLE_DEGREES * Math.PI / 180;
+  const barMajor = { x: Math.sin(barAngle), y: Math.cos(barAngle) };
+  const barMinor = { x: Math.cos(barAngle), y: -Math.sin(barAngle) };
+  const barPoints = Array.from({ length: 81 }, (_, index): GalacticPoint => {
+    const angle = index / 80 * TAU;
+    const along = Math.cos(angle) * GALACTIC_BAR_HALF_LENGTH_KPC;
+    const across = Math.sin(angle) * 1.08;
+    return {
+      xKpc: barMajor.x * along + barMinor.x * across,
+      yKpc: barMajor.y * along + barMinor.y * across,
+      zKpc: 0,
+    };
+  });
+  const barPath = pathFromGalacticPoints(barPoints, centerX, centerY, pixelsPerKpc);
+  barPath.closePath();
+
+  const armGuides = GALACTIC_MAJOR_ARM_GUIDES.map((guide) => {
+    const points = Array.from({ length: 181 }, (_, index) => {
+      const radiusKpc = 2.55 + index / 180 * (GALACTIC_DISPLAY_RADIUS_KPC - 2.55);
+      return majorArmPointAtRadius(guide, radiusKpc);
+    });
+    const dustPoints = Array.from({ length: 181 }, (_, index) => {
+      const radiusKpc = 2.55 + index / 180 * (GALACTIC_DISPLAY_RADIUS_KPC - 2.55);
+      return majorArmPointAtRadius(
+        guide,
+        Math.max(2.35, radiusKpc - galacticArmWidthKpc(radiusKpc) * 0.58),
+      );
+    });
+    return {
+      path: pathFromGalacticPoints(points, centerX, centerY, pixelsPerKpc),
+      dustPath: pathFromGalacticPoints(dustPoints, centerX, centerY, pixelsPerKpc),
+      width: galacticArmWidthKpc(9) * pixelsPerKpc,
+    };
+  });
+
+  const measuredSegments = GALACTIC_SPIRAL_SEGMENTS.map((segment) => {
+    const points = sampleSpiralSegment(segment, 72);
+    const labelPoint = points[Math.floor(points.length * 0.72)];
+    return {
+      key: segment.key,
+      name: segment.name,
+      path: pathFromGalacticPoints(points, centerX, centerY, pixelsPerKpc),
+      width: Math.max(0.9, segment.widthAtKinkKpc * pixelsPerKpc * 0.7),
+      label: projectGalaxyPoint(labelPoint, centerX, centerY, pixelsPerKpc),
+    };
+  });
+
+  const particlePaths = Array.from({ length: 12 }, () => new Path2D());
+  const particleRadii = [0.38, 0.68, 1.05];
+  for (const particle of GALAXY_PARTICLE_FIELD) {
+    const projected = projectGalaxyPoint(particle, centerX, centerY, pixelsPerKpc);
+    const radiusPixels = particleRadii[particle.sizeBucket] *
+      (particle.layer === 'arm' ? 1.08 : 1);
+    const path = particlePaths[particle.colorBucket * 3 + particle.sizeBucket];
+    path.moveTo(projected.x + radiusPixels, projected.y);
+    path.arc(projected.x, projected.y, radiusPixels, 0, TAU);
+  }
+
+  const trailPoints = SOLAR_GALACTIC_TRAIL.map((point) =>
+    projectGalaxyPoint(point, centerX, centerY, pixelsPerKpc));
+  const trailBatches: Array<{ path: Path2D; endProgress: number; uncertainty: number }> = [];
+  const trailBatchSize = 14;
+  for (let start = 0; start < SOLAR_GALACTIC_TRAIL.length - 1; start += trailBatchSize) {
+    const end = Math.min(SOLAR_GALACTIC_TRAIL.length - 1, start + trailBatchSize);
+    const batchPoints = SOLAR_GALACTIC_TRAIL.slice(Math.max(0, start - 1), end + 1);
+    trailBatches.push({
+      path: pathFromGalacticPoints(batchPoints, centerX, centerY, pixelsPerKpc),
+      endProgress: SOLAR_GALACTIC_TRAIL[end].progress,
+      uncertainty: SOLAR_GALACTIC_TRAIL[Math.floor((start + end) / 2)].uncertainty,
+    });
+  }
+
+  const built = {
+    centerX,
+    centerY,
+    radius,
+    pixelsPerKpc,
+    barPath,
+    armGuides,
+    measuredSegments,
+    particlePaths,
+    trailBatches,
+    trailPoints,
+  };
+  galaxyRenderCache.set(cacheKey, built);
+  if (galaxyRenderCache.size > 4) {
+    const oldest = galaxyRenderCache.keys().next().value;
+    if (oldest) galaxyRenderCache.delete(oldest);
+  }
+  return built;
+}
+
+const galaxyStaticSurfaceCache = new Map<string, SurfaceCanvas>();
+
+function drawGalaxyStaticLayer(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  model: GalaxyRenderCache,
+) {
+  const { centerX, centerY, radius } = model;
+  const background = context.createRadialGradient(centerX, centerY, 0, centerX, centerY, width * 0.72);
+  background.addColorStop(0, '#12101d');
+  background.addColorStop(0.5, '#050713');
+  background.addColorStop(1, '#01030a');
+  context.fillStyle = background;
   context.fillRect(0, 0, width, height);
-  drawStars(context, width, height, elapsedSeconds);
+  drawStars(context, width, height, 0);
 
   context.save();
   context.translate(centerX, centerY);
-  context.rotate(-0.22);
-  for (let arm = 0; arm < 4; arm += 1) {
-    context.strokeStyle = `rgba(${160 + arm * 12}, ${170 + arm * 8}, 220, .25)`;
-    context.lineWidth = radius * 0.055;
-    context.shadowColor = 'rgba(102, 132, 215, .35)';
-    context.shadowBlur = 18;
-    context.beginPath();
-    for (let step = 0; step < 180; step += 1) {
-      const theta = arm * TAU / 4 + step * 0.055;
-      const r = radius * 0.04 * Math.exp(0.155 * theta);
-      if (r > radius) break;
-      const x = Math.cos(theta) * r;
-      const y = Math.sin(theta) * r * 0.46;
-      if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
-    }
-    context.stroke();
-  }
-  context.restore();
-
-  drawGlow(context, centerX, centerY, 18, 'rgba(255, 214, 143, .52)');
-  const sunOrbitRadius = radius * (GALACTIC_CENTER_DISTANCE_KPC / 14);
-  const loops = 4_567 / SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS;
-  context.save();
-  context.translate(centerX, centerY);
-  context.rotate(-0.22);
-  context.strokeStyle = 'rgba(102, 221, 213, .5)';
-  context.lineWidth = 1.3;
+  context.rotate(GALAXY_VIEW_ROTATION_RADIANS);
+  context.scale(1, GALAXY_PLANE_COMPRESSION);
+  const diskGradient = context.createRadialGradient(0, 0, 0, 0, 0, radius);
+  diskGradient.addColorStop(0, 'rgba(196, 154, 109, .52)');
+  diskGradient.addColorStop(0.14, 'rgba(115, 90, 91, .34)');
+  diskGradient.addColorStop(0.35, 'rgba(53, 53, 80, .42)');
+  diskGradient.addColorStop(0.7, 'rgba(20, 28, 53, .28)');
+  diskGradient.addColorStop(1, 'rgba(4, 7, 18, 0)');
+  context.fillStyle = diskGradient;
   context.beginPath();
-  for (let step = 0; step <= 520; step += 1) {
-    const progress = step / 520;
-    const angle = -loops * TAU * (1 - progress);
-    const verticalPhase = progress * 4_567 / SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS * TAU;
-    const bob = Math.sin(verticalPhase) * radius * 0.018;
-    const orbitalDrift = sunOrbitRadius * (0.94 + progress * 0.06);
-    const x = Math.cos(angle) * orbitalDrift;
-    const y = Math.sin(angle) * orbitalDrift * 0.46 + bob;
-    if (step === 0) context.moveTo(x, y); else context.lineTo(x, y);
-  }
-  context.stroke();
-  // A 224 Myr Galactic orbit has no honest browser-visible real-time motion.
-  // Keep the present marker at the modeled trail endpoint instead of inventing it.
-  const sunX = sunOrbitRadius;
-  const sunY = -SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC / 200 * radius * 0.018;
-  drawGlow(context, sunX, sunY, 7, 'rgba(255, 209, 103, .72)');
-  context.fillStyle = '#ffe1a0';
-  context.beginPath();
-  context.arc(sunX, sunY, 3.4, 0, TAU);
+  context.arc(0, 0, radius, 0, TAU);
   context.fill();
+  context.strokeStyle = 'rgba(105, 125, 170, .13)';
+  context.lineWidth = 1;
+  context.stroke();
   context.restore();
 
-  const infoY = height - 130;
-  roundedRect(context, 18, infoY, Math.min(358, width - 36), 62, 12);
-  context.fillStyle = 'rgba(4, 7, 18, .72)';
+  context.fillStyle = 'rgba(185, 126, 82, .16)';
+  context.fill(model.barPath);
+  context.strokeStyle = 'rgba(224, 171, 105, .28)';
+  context.lineWidth = 1.1;
+  context.stroke(model.barPath);
+
+  context.save();
+  context.lineCap = 'round';
+  for (const arm of model.armGuides) {
+    context.strokeStyle = 'rgba(112, 137, 196, .13)';
+    context.lineWidth = Math.max(5, arm.width * 2.6);
+    context.stroke(arm.path);
+    context.strokeStyle = 'rgba(161, 178, 217, .2)';
+    context.lineWidth = Math.max(1.2, arm.width * 0.72);
+    context.stroke(arm.path);
+  }
+  for (const arm of model.armGuides) {
+    context.strokeStyle = 'rgba(2, 4, 12, .48)';
+    context.lineWidth = Math.max(1.25, arm.width * 0.5);
+    context.stroke(arm.dustPath);
+  }
+  context.restore();
+
+  const particleColors = [
+    ['rgba(255, 199, 123, .34)', 'rgba(255, 205, 132, .47)', 'rgba(255, 222, 165, .62)'],
+    ['rgba(225, 220, 207, .26)', 'rgba(235, 232, 221, .4)', 'rgba(247, 242, 226, .56)'],
+    ['rgba(188, 208, 239, .25)', 'rgba(200, 220, 248, .42)', 'rgba(220, 235, 255, .58)'],
+    ['rgba(91, 183, 231, .35)', 'rgba(103, 202, 245, .54)', 'rgba(144, 222, 255, .72)'],
+  ] as const;
+  model.particlePaths.forEach((path, index) => {
+    const color = Math.floor(index / 3);
+    const size = index % 3;
+    context.fillStyle = particleColors[color][size];
+    context.fill(path);
+  });
+
+  context.save();
+  context.lineCap = 'round';
+  model.measuredSegments.forEach((segment, index) => {
+    const hues = [
+      'rgba(222, 174, 113, .52)',
+      'rgba(100, 206, 199, .65)',
+      'rgba(104, 178, 229, .68)',
+      'rgba(169, 145, 224, .62)',
+      'rgba(100, 222, 213, .8)',
+      'rgba(197, 205, 231, .65)',
+      'rgba(121, 159, 221, .56)',
+    ];
+    context.strokeStyle = hues[index];
+    context.lineWidth = segment.width;
+    context.stroke(segment.path);
+  });
+  context.restore();
+
+  drawGlow(context, centerX, centerY, 12, 'rgba(255, 198, 116, .48)');
+  context.fillStyle = '#f4c27e';
+  context.beginPath();
+  context.arc(centerX, centerY, 2.7, 0, TAU);
+  context.fill();
+  context.fillStyle = 'rgba(233, 217, 192, .78)';
+  context.font = '500 8px ui-monospace, SFMono-Regular, Menlo, monospace';
+  context.textAlign = 'center';
+  context.fillText('SAGITTARIUS A*', centerX, centerY - 13);
+  context.textAlign = 'start';
+
+  for (const segment of model.measuredSegments) {
+    if (segment.key !== 'local') continue;
+    context.fillStyle = 'rgba(116, 226, 214, .88)';
+    context.font = '500 7px ui-monospace, SFMono-Regular, Menlo, monospace';
+    context.fillText(segment.name.toUpperCase(), segment.label.x + 4, segment.label.y - 3);
+  }
+}
+
+function galaxyStaticSurface(
+  width: number,
+  height: number,
+  pixelRatio: number,
+  model: GalaxyRenderCache,
+): SurfaceCanvas | undefined {
+  const boundedPixelRatio = clamp(pixelRatio, 0.55, 2);
+  const cacheKey = `${Math.round(width)}:${Math.round(height)}:${boundedPixelRatio.toFixed(2)}`;
+  const cached = galaxyStaticSurfaceCache.get(cacheKey);
+  if (cached) return cached;
+  const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(
+      Math.max(1, Math.round(width * boundedPixelRatio)),
+      Math.max(1, Math.round(height * boundedPixelRatio)),
+    )
+    : Object.assign(document.createElement('canvas'), {
+      width: Math.max(1, Math.round(width * boundedPixelRatio)),
+      height: Math.max(1, Math.round(height * boundedPixelRatio)),
+    });
+  const surfaceContext = surface.getContext('2d') as CanvasRenderingContext2D | null;
+  if (!surfaceContext) return undefined;
+  surfaceContext.setTransform(boundedPixelRatio, 0, 0, boundedPixelRatio, 0, 0);
+  drawGalaxyStaticLayer(surfaceContext, width, height, model);
+  galaxyStaticSurfaceCache.set(cacheKey, surface);
+  if (galaxyStaticSurfaceCache.size > 3) {
+    const oldest = galaxyStaticSurfaceCache.keys().next().value;
+    if (oldest) galaxyStaticSurfaceCache.delete(oldest);
+  }
+  return surface;
+}
+
+function drawGalaxyScene(frame: CanvasFrame) {
+  const { context, width, height, elapsedSeconds, cosmicAgeYears, reducedMotion, pixelRatio } = frame;
+  const model = buildGalaxyRenderCache(width, height);
+  const { centerX, centerY, radius, pixelsPerKpc } = model;
+  const staticSurface = galaxyStaticSurface(width, height, pixelRatio, model);
+  if (staticSurface) context.drawImage(staticSurface, 0, 0, width, height);
+  else drawGalaxyStaticLayer(context, width, height, model);
+
+  const presentCosmicAgeYears = 13.8e9;
+  const sunBirthCosmicAgeYears = presentCosmicAgeYears - 4.567e9;
+  const selectedSolarProgress = clamp(
+    (cosmicAgeYears - sunBirthCosmicAgeYears) / 4.567e9,
+    0,
+    1,
+  );
+  const selectedHistoricalEpoch = Math.abs(cosmicAgeYears - presentCosmicAgeYears) > 1e6;
+  const replayCycle = (elapsedSeconds % 22) / 22;
+  const replayProgress = selectedHistoricalEpoch
+    ? selectedSolarProgress
+    : reducedMotion ? 1 : smoothstep(0.035, 0.82, replayCycle);
+  const sunExists = cosmicAgeYears >= sunBirthCosmicAgeYears;
+
+  if (sunExists) {
+    context.save();
+    context.lineCap = 'round';
+    for (const batch of model.trailBatches) {
+      if (batch.endProgress > replayProgress + 0.022) break;
+      if (batch.uncertainty >= 0.99) {
+        context.setLineDash([2, 5]);
+        context.strokeStyle = 'rgba(76, 155, 157, .11)';
+        context.lineWidth = 0.75;
+      } else {
+        context.setLineDash([]);
+        context.strokeStyle = `rgba(91, 224, 212, ${0.22 + (1 - batch.uncertainty) * 0.5})`;
+        context.lineWidth = 0.8 + (1 - batch.uncertainty) * 0.75;
+      }
+      context.stroke(batch.path);
+    }
+    context.restore();
+
+    const tracerIndex = Math.round(replayProgress * (model.trailPoints.length - 1));
+    const tracer = model.trailPoints[tracerIndex];
+    if (!selectedHistoricalEpoch && replayProgress < 0.995) {
+      context.fillStyle = 'rgba(102, 238, 221, .94)';
+      context.beginPath();
+      context.arc(tracer.x, tracer.y, 2.2, 0, TAU);
+      context.fill();
+    }
+
+    const markerProgress = selectedHistoricalEpoch ? selectedSolarProgress : 1;
+    const markerModel = solarGalacticPositionAtProgress(markerProgress);
+    const marker = projectGalaxyPoint(markerModel, centerX, centerY, pixelsPerKpc);
+    drawGlow(context, marker.x, marker.y, 6.5, 'rgba(255, 209, 103, .7)');
+    context.fillStyle = '#ffe1a0';
+    context.beginPath();
+    context.arc(marker.x, marker.y, 3.1, 0, TAU);
+    context.fill();
+    context.fillStyle = 'rgba(255, 226, 163, .9)';
+    context.font = '600 8px ui-monospace, SFMono-Regular, Menlo, monospace';
+    context.textAlign = 'right';
+    context.fillText(
+      selectedHistoricalEpoch ? 'SUN · SELECTED EPOCH' : 'SUN · NOW',
+      marker.x - 7,
+      marker.y + 10,
+    );
+    context.textAlign = 'start';
+  }
+
+  const loops = 4_567 / SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS;
+  const infoY = height - 151;
+  roundedRect(context, 18, infoY, Math.min(440, width - 36), 83, 12);
+  context.fillStyle = 'rgba(4, 7, 18, .78)';
   context.fill();
   context.fillStyle = '#b5c5da';
-  context.font = '500 10px ui-monospace, SFMono-Regular, Menlo, monospace';
-  context.fillText(`SUN · ${GALACTIC_CENTER_DISTANCE_KPC.toFixed(3)} KPC FROM SAGITTARIUS A*`, 30, infoY + 24);
-  context.fillText(`Z ≈ +${SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC.toFixed(1)} PC · VERTICAL MODEL ≈ ${SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS} MYR`, 30, infoY + 41);
-  context.fillText(`TRAIL · ≈ ${loops.toFixed(1)} GALACTIC ORBITS SINCE SOLAR BIRTH`, 30, infoY + 57);
+  const compactInfo = width < 560;
+  context.font = `500 ${compactInfo ? 8 : 9}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+  const infoLines = compactInfo
+    ? [
+      `BAR ${GALACTIC_BAR_HALF_LENGTH_KPC.toFixed(1)} KPC · ${GALACTIC_BAR_ANGLE_DEGREES}° · 4-ARM GUIDE ≈${GALACTIC_MEAN_ARM_PITCH_DEGREES}°`,
+      `SUN R ${GALACTIC_CENTER_DISTANCE_KPC.toFixed(3)} KPC · Z +${SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC.toFixed(1)} PC · ≈${loops.toFixed(1)} ORBITS`,
+      `PERIODS ${SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS} / ${SUN_GALACTIC_EPICYCLE_PERIOD_MILLION_YEARS} / ${SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS} MYR`,
+      `SOLID = MASER DATA · DASHED >${SUN_GALACTIC_ORBIT_PREDICTABILITY_MILLION_YEARS / 1_000} GYR`,
+    ]
+    : [
+      `BAR · ${GALACTIC_BAR_HALF_LENGTH_KPC.toFixed(1)} KPC HALF-LENGTH · ${GALACTIC_BAR_ANGLE_DEGREES}° · 4 ARMS ≈ ${GALACTIC_MEAN_ARM_PITCH_DEGREES}°`,
+      `SUN · R ${GALACTIC_CENTER_DISTANCE_KPC.toFixed(3)} KPC · Z +${SUN_HEIGHT_ABOVE_GALACTIC_PLANE_PC.toFixed(1)} PC · ≈ ${loops.toFixed(1)} ORBITS`,
+      `MEAN PERIODS · AZ ${SUN_GALACTIC_ORBIT_PERIOD_MILLION_YEARS} · RADIAL ${SUN_GALACTIC_EPICYCLE_PERIOD_MILLION_YEARS} · VERTICAL ${SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS} MYR`,
+      `MASER SEGMENTS SOLID · 4-ARM GUIDE EXTRAPOLATED · REPLAY >${SUN_GALACTIC_ORBIT_PREDICTABILITY_MILLION_YEARS / 1_000} GYR DASHED`,
+    ];
+  infoLines.forEach((line, index) => context.fillText(line, 30, infoY + 20 + index * 17));
+
+  if (cosmicAgeYears < 2e8) {
+    context.fillStyle = 'rgba(2, 4, 12, .84)';
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = '#d8dfea';
+    context.textAlign = 'center';
+    context.font = '400 22px Georgia, Times New Roman, serif';
+    context.fillText('The Milky Way has not assembled yet.', width * 0.5, height * 0.48);
+    context.textAlign = 'start';
+  }
 }
 
 function drawUniverseScene(frame: CanvasFrame) {

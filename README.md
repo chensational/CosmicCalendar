@@ -14,7 +14,7 @@
 - **Local horizon:** the topocentric Sun with a near-real-time SDO/HMI photosphere, libration-oriented LRO lunar surface, Galactic core, sampled Milky Way plane, and all 9,096 Bright Star Catalogue entries projected for a device or manually entered location, including proper motion, precession, refraction, extinction, B−V color, and altitude-sensitive scintillation.
 - **Tranquility Base:** Earth positioned and phased above the Apollo 11 landing-site horizon using the topocentric lunar body frame.
 - **Solar System:** the SDO/HMI photosphere, all planets, and 20 major satellites as cached physically lit spheres, IAU/tidally locked surface orientation, finite-Sun umbra/penumbra state, physically projected Saturn rings, and Mercury perihelion precession.
-- **Galactic scale:** the Sun at the measured Galactic radius and height, with a modeled orbit/vertical-oscillation trail from Solar birth.
+- **Galactic scale:** a measured-parameter barred Milky Way with four extrapolated logarithmic-arm guides, solid VLBI maser-constrained arm segments, dust lanes, and a time-lapse Solar orbit/epicycle/vertical replay that visibly loses certainty beyond the published predictability horizon.
 - **Cosmic scale:** a Laniākea velocity-flow visualization with a logarithmic timeline from inflation to an explicitly hypothetical heat-death horizon.
 - **Calendar:** a six-week civil month with calculated lunar illumination for every day.
 - **Distance console:** latitude-sensitive Earth travel, Tranquility Base, Earth/Sun, Sun/Galactic-center, and Local-Group/CMB model values, including transparent CMB-frame hierarchy estimates.
@@ -103,7 +103,7 @@ See [Scientific method and source ledger](docs/SCIENTIFIC_METHOD.md) for constan
 - `ResizeObserver` and `IntersectionObserver` pause work offscreen.
 - No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The 8 KiB lunar albedo map and ~2.3 KiB compact solar frame are embedded; the demo loads one same-origin static star-catalog binary.
 - Browser coordinates remain in local storage. Apple coordinates remain in the signed app group's `UserDefaults`.
-- Production React library (including exported CosmicWatermark): approximately **79.1 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
+- Production React library (including exported CosmicWatermark): approximately **82.5 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
 
 More detail: [Performance architecture](docs/PERFORMANCE.md).
 

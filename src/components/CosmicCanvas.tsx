@@ -102,11 +102,15 @@ export function CosmicCanvas({
     const draw = (timestamp: number) => {
       if (!visible || !pageVisible) return;
       const isTransitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
+      const galaxyReplayIsActive = displayScaleRef.current > 1.5 && displayScaleRef.current < 2.5;
+      const continuousFramesPerSecond = galaxyReplayIsActive
+        ? Math.min(8, quality.atmosphericFramesPerSecond)
+        : quality.atmosphericFramesPerSecond;
       const frameIntervalMilliseconds = isTransitioning
         ? transitionFrameIntervalMilliseconds
         : Math.max(
           transitionFrameIntervalMilliseconds,
-          1_000 / quality.atmosphericFramesPerSecond,
+          1_000 / continuousFramesPerSecond,
         );
       if (!frameRef.current.reducedMotion && timestamp - lastRenderedAt < frameIntervalMilliseconds) {
         animationFrame = window.requestAnimationFrame(draw);
@@ -131,14 +135,16 @@ export function CosmicCanvas({
           ? Math.max(0, Math.min((Date.now() - state.solar.date.getTime()) / 1_000, 120))
           : 0,
         renderQuality: quality.resolutionScale,
+        pixelRatio: canvas.width / width,
         ...state,
       });
       const renderMilliseconds = performance.now() - renderStartedAt;
       canvas.dataset.renderMilliseconds = renderMilliseconds.toFixed(1);
       adoptQuality(nextAdaptiveRenderQuality(quality, renderMilliseconds));
       const transitioning = Math.abs(targetScaleRef.current - displayScaleRef.current) > 0.0005;
-      const atmosphereIsActive = displayScaleRef.current < 0.5;
-      if (visible && !state.reducedMotion && (transitioning || atmosphereIsActive)) {
+      const sceneHasContinuousMotion = displayScaleRef.current < 0.5 ||
+        (displayScaleRef.current > 1.5 && displayScaleRef.current < 2.5);
+      if (visible && !state.reducedMotion && (transitioning || sceneHasContinuousMotion)) {
         animationFrame = window.requestAnimationFrame(draw);
       }
     };

@@ -92,10 +92,16 @@ The JPL state snapshot is reproducible with `npm run ephemeris:update`. It is cu
 | Galactocentric radius | 8.249 kpc | GRAVITY Collaboration: 8249 ± 9(stat) ± 45(sys) pc ([ESO paper](https://elt.eso.org/public/archives/releases/sciencepapers/eso2006/eso2006a.pdf)) |
 | Height above local mid-plane | +20.8 pc | Bennett & Bovy: 20.8 ± 0.3 pc ([paper](https://arxiv.org/abs/1809.03507)) |
 | Local circular speed | 233.3 km/s | Rounded from Gaia-era estimate 233 ± 7 km/s ([paper](https://arxiv.org/abs/2309.02895)) |
+| Mass-weighted stellar-disc scale length | 2.15 kpc | 2.15 ± 0.14 kpc from 16,269 SEGUE G dwarfs ([Bovy & Rix](https://iopscience.iop.org/article/10.1088/0004-637X/779/2/115)) |
+| Bar half-length / angle | 5.0 kpc / 30° adopted | 5.0 ± 0.2 kpc and 28°–33° from infrared red-clump surveys ([Wegg, Gerhard & Portail](https://academic.oup.com/mnras/article/450/4/4050/989881)) |
+| Major-arm mean pitch | 10° | Four-arm, VLBI-maser fit; individual segments retain measured kinks and widths ([Reid et al.](https://iopscience.iop.org/article/10.3847/1538-4357/ab4a11)) |
 | Azimuthal/orbital period | 224.2 Myr | 224.2 ± 22.3 Myr ([MNRAS](https://academic.oup.com/mnras/article/483/3/3971/5234256)) |
+| Radial epicycle period | 163.2 Myr | 163.2 ± 16.7 Myr in the same probabilistic Galactic model |
 | Vertical oscillation period | 87.8 Myr | 87.8 ± 10.6 Myr in the same probabilistic Galactic model |
 
-The displayed birth-to-present trail is a circular/vertical explanatory replay. The cited orbit study finds the Sun's modeled path becomes unpredictable after about 800 Myr because Galactic-potential uncertainty dominates. A precise 4.567-billion-year backtrace is therefore impossible; the interface labels the trail as a model.
+The face-on canvas is a structural inference, not a photograph from outside the Galaxy. Seven solid arm segments reproduce the kink radii, before/after pitch angles, azimuth ranges, and intrinsic widths in Reid et al. Table 2. A faint four-arm guide extrapolates the paper's 10° length-weighted mean only to make the uncertain far side legible. The bar uses the midpoint of the measured angle range, and a 760-point deterministic field samples the exponential disc, bar, and young arm populations as a visibility texture—not as 760 catalogued stars.
+
+The birth-to-present Solar trail now combines the measured current radius/height with the probabilistic model's azimuthal, radial-epicycle, and vertical periods. Present radial and vertical speeds of 10 and 7 km/s set bounded harmonic amplitudes, so the replay terminates exactly at R = 8.249 kpc and Z = +20.8 pc rather than using arbitrary screen bobbing. The cited orbit study finds the path becomes totally unpredictable within about 800 Myr because Galactic-potential uncertainty dominates. The UI therefore dashes and fades the older mean path while retaining it as the explicitly requested narrative replay; it does not claim a recoverable 4.567-billion-year worldline.
 
 ## Laniākea, Great Attractor, and expansion
 
