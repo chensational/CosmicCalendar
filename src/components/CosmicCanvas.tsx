@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { wheelDeltaToScaleStep } from '../core/interaction';
 import type { HorizonSnapshot, LunarHorizonSnapshot, SolarSystemSnapshot } from '../core/types';
 import { renderCosmicFrame } from './canvasRenderer';
 
@@ -120,7 +121,7 @@ export function CosmicCanvas({
       tabIndex={0}
       onWheel={(event) => {
         event.preventDefault();
-        onWheel(event.deltaY);
+        onWheel(wheelDeltaToScaleStep(event.deltaY, event.deltaMode, event.currentTarget.clientHeight));
       }}
     />
   );

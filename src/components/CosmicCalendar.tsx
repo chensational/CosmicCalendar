@@ -140,18 +140,16 @@ export function CosmicCalendar({
   const activeScaleIndex = Math.round(scalePosition);
   const activeScale = SCALES[activeScaleIndex];
 
-  const changeScaleOrTime = (deltaY: number) => {
-    const direction = Math.sign(deltaY);
-    if (!direction) return;
+  const changeScaleOrTime = (delta: number) => {
+    if (!delta) return;
     setScalePosition((current) => {
-      const delta = direction * 0.16;
       const proposed = current + delta;
       if (proposed < 0) {
-        setCosmicTimePosition((time) => clamp(time + 0.16, 0, COSMIC_EPOCHS.length - 1));
+        setCosmicTimePosition((time) => clamp(time - delta, 0, COSMIC_EPOCHS.length - 1));
         return 0;
       }
       if (proposed > SCALES.length - 1) {
-        setCosmicTimePosition((time) => clamp(time - 0.16, 0, COSMIC_EPOCHS.length - 1));
+        setCosmicTimePosition((time) => clamp(time - delta, 0, COSMIC_EPOCHS.length - 1));
         return SCALES.length - 1;
       }
       return proposed;
@@ -178,8 +176,8 @@ export function CosmicCalendar({
       data-scale={activeScale.key}
       aria-label="Cosmic Calendar"
       onKeyDown={(event) => {
-        if (event.key === 'ArrowUp') changeScaleOrTime(-100);
-        if (event.key === 'ArrowDown') changeScaleOrTime(100);
+        if (event.key === 'ArrowUp') changeScaleOrTime(-0.16);
+        if (event.key === 'ArrowDown') changeScaleOrTime(0.16);
       }}
     >
       <header className="cc-header">
