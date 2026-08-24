@@ -22,6 +22,43 @@ export const SOLAR_VIEW_BASIS = (() => {
   return { screenX, screenY, towardViewer } as const;
 })();
 
+/** IAU α₀, δ₀, W rotation sequence expressed as an EQJ body-fixed basis. */
+export function bodyFixedEquatorialBasis(
+  poleRightAscensionHours: number,
+  poleDeclinationDegrees: number,
+  primeMeridianDegrees: number,
+) {
+  const alpha = poleRightAscensionHours * 15 * Math.PI / 180;
+  const delta = poleDeclinationDegrees * Math.PI / 180;
+  const spin = primeMeridianDegrees * Math.PI / 180;
+  const north = normalize({
+    x: Math.cos(delta) * Math.cos(alpha),
+    y: Math.cos(delta) * Math.sin(alpha),
+    z: Math.sin(delta),
+  });
+  const equatorialNode = {
+    x: -Math.sin(alpha),
+    y: Math.cos(alpha),
+    z: 0,
+  };
+  const equatorialQuarter = {
+    x: -Math.sin(delta) * Math.cos(alpha),
+    y: -Math.sin(delta) * Math.sin(alpha),
+    z: Math.cos(delta),
+  };
+  const meridian = normalize({
+    x: equatorialNode.x * Math.cos(spin) + equatorialQuarter.x * Math.sin(spin),
+    y: equatorialNode.y * Math.cos(spin) + equatorialQuarter.y * Math.sin(spin),
+    z: equatorialNode.z * Math.cos(spin) + equatorialQuarter.z * Math.sin(spin),
+  });
+  const east = normalize({
+    x: -equatorialNode.x * Math.sin(spin) + equatorialQuarter.x * Math.cos(spin),
+    y: -equatorialNode.y * Math.sin(spin) + equatorialQuarter.y * Math.cos(spin),
+    z: -equatorialNode.z * Math.sin(spin) + equatorialQuarter.z * Math.cos(spin),
+  });
+  return { north, meridian, east } as const;
+}
+
 export function toSolarView(vector: CartesianPosition): CartesianPosition {
   return {
     x: dot(vector, SOLAR_VIEW_BASIS.screenX),

@@ -3,14 +3,15 @@ import {
   Ecliptic,
   Equator,
   EquatorFromVector,
+  GeoVector,
   HelioVector,
   Horizon,
   Illumination,
   JupiterMoons,
-  Libration,
   MakeTime,
   MoonPhase,
   Observer,
+  ObserverVector,
   RotateVector,
   RotationAxis,
   Rotation_EQJ_ECL,
@@ -31,13 +32,17 @@ import {
   clamp,
   degreesToRadians,
   dot,
+  greatCircleBearingRadians,
   hashUnit,
   magnitude,
   normalize,
   normalizeDegrees,
   perpendicularDistanceToRay,
+  radiansToDegrees,
   shortestAngularDifference,
+  subtract,
 } from './math';
+import { bodyFixedEquatorialBasis } from './planetSurface';
 import type {
   CartesianPosition,
   HorizonSnapshot,
@@ -54,6 +59,7 @@ const MODERN_EPHEMERIS_END_YEAR = 3000;
 const J2000_UNIX_MS = Date.UTC(2000, 0, 1, 12);
 const SATELLITE_REFERENCE_MS = new Date(satelliteReference.referenceDate).getTime();
 const APPARENT_MOTION_SAMPLE_SECONDS = 60;
+const MOON_MEAN_RADIUS_KM = 1_737.4;
 const satelliteReferenceMap = new Map(
   satelliteReference.entries.map((entry) => [entry.key, entry]),
 );
@@ -120,6 +126,37 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
     horizontalPosition(Body.Moon, futureDate, observer),
   );
   const moonPhaseAngle = MoonPhase(date);
+  const lunarAxis = RotationAxis(Body.Moon, date);
+  const lunarBasis = bodyFixedEquatorialBasis(lunarAxis.ra, lunarAxis.dec, lunarAxis.spin);
+  const observerEqj = asCartesian(ObserverVector(date, observer, false));
+  const moonEqj = asCartesian(GeoVector(Body.Moon, date, true));
+  const sunEqj = asCartesian(GeoVector(Body.Sun, date, true));
+  const moonToObserver = normalize(subtract(observerEqj, moonEqj));
+  const moonToSun = normalize(subtract(sunEqj, moonEqj));
+  const solarPhaseAngle = radiansToDegrees(Math.acos(clamp(dot(moonToObserver, moonToSun), -1, 1)));
+  const subObserverLatitude = radiansToDegrees(Math.asin(clamp(
+    dot(moonToObserver, lunarBasis.north),
+    -1,
+    1,
+  )));
+  const subObserverLongitude = radiansToDegrees(Math.atan2(
+    dot(moonToObserver, lunarBasis.east),
+    dot(moonToObserver, lunarBasis.meridian),
+  ));
+  const topocentricMoonDistanceKm = moon.distanceKm ?? magnitude(moonEqj) * AU_KM;
+  const angularDiameterDegrees = radiansToDegrees(2 * Math.atan(
+    MOON_MEAN_RADIUS_KM /
+    Math.sqrt(topocentricMoonDistanceKm ** 2 - MOON_MEAN_RADIUS_KM ** 2),
+  ));
+  const lunarPoleEqd = RotateVector(Rotation_EQJ_EQD(MakeTime(date)), lunarAxis.north);
+  const lunarPoleEquatorial = EquatorFromVector(lunarPoleEqd);
+  const lunarPoleHorizontal = Horizon(
+    date,
+    observer,
+    lunarPoleEquatorial.ra,
+    lunarPoleEquatorial.dec,
+    'normal',
+  );
   const milkyWay = Array.from({ length: 49 }, (_, index) => {
     const longitude = index * 7.5;
     return withApparentMotion(
@@ -135,7 +172,17 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
     moon: {
       ...moon,
       phaseAngleDegrees: moonPhaseAngle,
-      illuminatedFraction: (1 - Math.cos(degreesToRadians(moonPhaseAngle))) / 2,
+      solarPhaseAngleDegrees: solarPhaseAngle,
+      illuminatedFraction: (1 + Math.cos(degreesToRadians(solarPhaseAngle))) / 2,
+      angularDiameterDegrees,
+      subObserverLatitudeDegrees: subObserverLatitude,
+      subObserverLongitudeDegrees: subObserverLongitude,
+      northPoleBearingRadians: greatCircleBearingRadians(
+        moon.azimuthDegrees,
+        moon.altitudeDegrees,
+        lunarPoleHorizontal.azimuth,
+        lunarPoleHorizontal.altitude,
+      ),
     },
     galacticCenter: milkyWay[0],
     milkyWay,
@@ -143,11 +190,38 @@ export function getHorizonSnapshot(date: Date, location: ObserverLocation): Hori
 }
 
 function lunarEarthPosition(date: Date): LunarHorizonSnapshot['earth'] {
-  const libration = Libration(date);
+  const lunarAxis = RotationAxis(Body.Moon, date);
+  const lunarBasis = bodyFixedEquatorialBasis(lunarAxis.ra, lunarAxis.dec, lunarAxis.spin);
   const siteLatitude = degreesToRadians(APOLLO_11_SITE.latitude);
   const siteLongitude = degreesToRadians(APOLLO_11_SITE.longitude);
-  const earthLatitude = degreesToRadians(libration.elat);
-  const earthLongitude = degreesToRadians(libration.elon);
+  const siteNormalEqj = normalize({
+    x: lunarBasis.meridian.x * Math.cos(siteLatitude) * Math.cos(siteLongitude) +
+      lunarBasis.east.x * Math.cos(siteLatitude) * Math.sin(siteLongitude) +
+      lunarBasis.north.x * Math.sin(siteLatitude),
+    y: lunarBasis.meridian.y * Math.cos(siteLatitude) * Math.cos(siteLongitude) +
+      lunarBasis.east.y * Math.cos(siteLatitude) * Math.sin(siteLongitude) +
+      lunarBasis.north.y * Math.sin(siteLatitude),
+    z: lunarBasis.meridian.z * Math.cos(siteLatitude) * Math.cos(siteLongitude) +
+      lunarBasis.east.z * Math.cos(siteLatitude) * Math.sin(siteLongitude) +
+      lunarBasis.north.z * Math.sin(siteLatitude),
+  });
+  const moonEqj = asCartesian(GeoVector(Body.Moon, date, true));
+  const siteOffsetAu = MOON_MEAN_RADIUS_KM / AU_KM;
+  const lunarSiteEqj = {
+    x: moonEqj.x + siteNormalEqj.x * siteOffsetAu,
+    y: moonEqj.y + siteNormalEqj.y * siteOffsetAu,
+    z: moonEqj.z + siteNormalEqj.z * siteOffsetAu,
+  };
+  const earthDirectionEqj = normalize({
+    x: -lunarSiteEqj.x,
+    y: -lunarSiteEqj.y,
+    z: -lunarSiteEqj.z,
+  });
+  const earthLatitude = Math.asin(clamp(dot(earthDirectionEqj, lunarBasis.north), -1, 1));
+  const earthLongitude = Math.atan2(
+    dot(earthDirectionEqj, lunarBasis.east),
+    dot(earthDirectionEqj, lunarBasis.meridian),
+  );
   const deltaLongitude = earthLongitude - siteLongitude;
   const cosZenith = clamp(
     Math.sin(siteLatitude) * Math.sin(earthLatitude) +
@@ -160,14 +234,20 @@ function lunarEarthPosition(date: Date): LunarHorizonSnapshot['earth'] {
   const north = Math.cos(siteLatitude) * Math.sin(earthLatitude) -
     Math.sin(siteLatitude) * Math.cos(earthLatitude) * Math.cos(deltaLongitude);
   const earthPhaseAngle = normalizeDegrees(MoonPhase(date) + 180);
+  const sunFromEarth = normalize(asCartesian(GeoVector(Body.Sun, date, true)));
+  const observerFromEarth = normalize(lunarSiteEqj);
+  const earthSolarPhaseAngle = Math.acos(clamp(dot(sunFromEarth, observerFromEarth), -1, 1));
+  const earthDistanceKm = magnitude(lunarSiteEqj) * AU_KM;
 
   return {
     altitudeDegrees: altitude,
     azimuthDegrees: normalizeDegrees(Math.atan2(east, north) * 180 / Math.PI),
-    distanceKm: libration.dist_km,
-    angularDiameterDegrees: 2 * Math.atan(6_378.137 / libration.dist_km) * 180 / Math.PI,
+    distanceKm: earthDistanceKm,
+    angularDiameterDegrees: radiansToDegrees(2 * Math.atan(
+      6_378.137 / Math.sqrt(earthDistanceKm ** 2 - 6_378.137 ** 2),
+    )),
     phaseAngleDegrees: earthPhaseAngle,
-    illuminatedFraction: (1 - Math.cos(degreesToRadians(earthPhaseAngle))) / 2,
+    illuminatedFraction: (1 + Math.cos(earthSolarPhaseAngle)) / 2,
   };
 }
 
@@ -194,29 +274,7 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
   const illumination = planet.body === Body.Earth
     ? { phase_fraction: 1, phase_angle: 0, ring_tilt: undefined }
     : Illumination(planet.body, date);
-  const alpha = degreesToRadians(axis.ra * 15);
-  const delta = degreesToRadians(axis.dec);
-  const spin = degreesToRadians(axis.spin);
-  const equatorialReference = {
-    x: -Math.sin(delta) * Math.cos(alpha),
-    y: -Math.sin(delta) * Math.sin(alpha),
-    z: Math.cos(delta),
-  };
-  const equatorialEast = {
-    x: -Math.sin(alpha),
-    y: Math.cos(alpha),
-    z: 0,
-  };
-  const primeMeridianEqj = {
-    x: equatorialReference.x * Math.cos(spin) + equatorialEast.x * Math.sin(spin),
-    y: equatorialReference.y * Math.cos(spin) + equatorialEast.y * Math.sin(spin),
-    z: equatorialReference.z * Math.cos(spin) + equatorialEast.z * Math.sin(spin),
-  };
-  const eastEqj = {
-    x: -equatorialReference.x * Math.sin(spin) + equatorialEast.x * Math.cos(spin),
-    y: -equatorialReference.y * Math.sin(spin) + equatorialEast.y * Math.cos(spin),
-    z: -equatorialReference.z * Math.sin(spin) + equatorialEast.z * Math.cos(spin),
-  };
+  const bodyBasis = bodyFixedEquatorialBasis(axis.ra, axis.dec, axis.spin);
   const eclipticRotation = Rotation_EQJ_ECL().rot;
   const rotateEqjToEcliptic = (value: CartesianPosition): CartesianPosition => ({
     x: eclipticRotation[0][0] * value.x + eclipticRotation[1][0] * value.y + eclipticRotation[2][0] * value.z,
@@ -240,9 +298,9 @@ function getPlanetState(date: Date, planet: (typeof PLANETS)[number]): PlanetSta
     primeMeridianDegrees: axis.spin,
     rotationPeriodHours: planet.rotationPeriodHours,
     orbit: planet.orbit,
-    axisNorthEcliptic: rotateEqjToEcliptic(asCartesian(axis.north)),
-    primeMeridianEcliptic: rotateEqjToEcliptic(primeMeridianEqj),
-    eastEcliptic: rotateEqjToEcliptic(eastEqj),
+    axisNorthEcliptic: rotateEqjToEcliptic(bodyBasis.north),
+    primeMeridianEcliptic: rotateEqjToEcliptic(bodyBasis.meridian),
+    eastEcliptic: rotateEqjToEcliptic(bodyBasis.east),
   };
 }
 

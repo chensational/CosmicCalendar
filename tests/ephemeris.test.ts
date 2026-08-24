@@ -21,6 +21,11 @@ describe('Earth-local ephemeris', () => {
     expect(snapshot.sun.altitudeDegrees).toBeCloseTo(7.895707, 0);
     expect(snapshot.milkyWay).toHaveLength(49);
     expect(snapshot.sun.apparentMotion?.azimuthDegreesPerSecond).toBeTypeOf('number');
+    expect(snapshot.moon.angularDiameterDegrees).toBeGreaterThan(0.48);
+    expect(snapshot.moon.angularDiameterDegrees).toBeLessThan(0.57);
+    expect(Math.abs(snapshot.moon.subObserverLatitudeDegrees)).toBeLessThan(8);
+    expect(Math.abs(snapshot.moon.subObserverLongitudeDegrees)).toBeLessThan(9);
+    expect(Number.isFinite(snapshot.moon.northPoleBearingRadians)).toBe(true);
   });
 
   it('predicts smooth apparent motion between five-second ephemeris refreshes', () => {
@@ -34,6 +39,17 @@ describe('Earth-local ephemeris', () => {
     expect(shortestAngularDifference(predictedAzimuth, tenSecondsLater.sun.azimuthDegrees)).toBeCloseTo(0, 4);
   });
 
+  it('matches a JPL Horizons topocentric lunar-disc fixture', () => {
+    // Horizons target 301, coord@399 at Madison, 2026-08-07T17:00Z;
+    // quantities 4,10,13,14,17,32 using the high-precision MOON_ME frame.
+    const moon = getHorizonSnapshot(new Date('2026-08-07T17:00:00Z'), DEFAULT_LOCATION).moon;
+    expect(moon.illuminatedFraction * 100).toBeCloseTo(32.58871, 2);
+    expect(moon.solarPhaseAngleDegrees).toBeCloseTo(110.378835, 2);
+    expect(moon.angularDiameterDegrees * 3_600).toBeCloseTo(1_970.542, 0);
+    expect((moon.subObserverLongitudeDegrees + 360) % 360).toBeCloseTo(356.050569, 2);
+    expect(moon.subObserverLatitudeDegrees).toBeCloseTo(-6.418505, 2);
+  });
+
   it('places Earth above the Apollo 11 horizon on the near side', () => {
     const snapshot = getLunarHorizonSnapshot(new Date('2026-08-23T00:00:00Z'));
     expect(snapshot.earth.altitudeDegrees).toBeGreaterThan(55);
@@ -42,7 +58,15 @@ describe('Earth-local ephemeris', () => {
     expect(snapshot.earth.distanceKm).toBeLessThan(410_000);
     expect(snapshot.earth.angularDiameterDegrees).toBeGreaterThan(1.7);
     const terrestrial = getHorizonSnapshot(new Date('2026-08-23T00:00:00Z'), DEFAULT_LOCATION);
-    expect(snapshot.earth.illuminatedFraction + terrestrial.moon.illuminatedFraction).toBeCloseTo(1, 10);
+    // Horizons target 399 from Apollo 11 coordinates on 301 returns
+    // az 283.106874°, elevation 66.226714°, 23.96300% lit, 6532.976″.
+    expect(snapshot.earth.azimuthDegrees).toBeCloseTo(283.106874, 0);
+    expect(snapshot.earth.altitudeDegrees).toBeCloseTo(66.226714, 0);
+    expect(snapshot.earth.illuminatedFraction * 100).toBeCloseTo(23.96300, 2);
+    expect(snapshot.earth.angularDiameterDegrees * 3_600).toBeCloseTo(6_532.976, 0);
+    // The two views are nearly complementary; topocentric parallax means a
+    // lunar site and Madison do not observe exactly reciprocal phase angles.
+    expect(snapshot.earth.illuminatedFraction + terrestrial.moon.illuminatedFraction).toBeCloseTo(1, 2);
   });
 });
 

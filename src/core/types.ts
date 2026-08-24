@@ -41,7 +41,12 @@ export interface HorizonSnapshot {
   sun: HorizontalPosition;
   moon: HorizontalPosition & {
     phaseAngleDegrees: number;
+    solarPhaseAngleDegrees: number;
     illuminatedFraction: number;
+    angularDiameterDegrees: number;
+    subObserverLatitudeDegrees: number;
+    subObserverLongitudeDegrees: number;
+    northPoleBearingRadians: number;
   };
   galacticCenter: HorizontalPosition;
   milkyWay: HorizontalPosition[];

@@ -5,6 +5,12 @@ import {
   SUN_VERTICAL_OSCILLATION_PERIOD_MILLION_YEARS,
 } from '../core/constants';
 import { clamp, dot, greatCircleBearingRadians, hashUnit, normalize, normalizeDegrees, smoothstep } from '../core/math';
+import {
+  lunarReflectance,
+  lunarSurfaceGeometry,
+  sampleLunarAlbedo,
+  visibleLunarNormalToBody,
+} from '../core/lunarSurface';
 import { eclipticSphericalToCartesian, orbitalPositionAtTrueAnomaly } from '../core/orbits';
 import {
   lambertianLight,
@@ -38,6 +44,7 @@ export interface CanvasFrame {
 }
 
 const TAU = Math.PI * 2;
+type SurfaceCanvas = HTMLCanvasElement | OffscreenCanvas;
 const STAR_FIELD = Array.from({ length: 170 }, (_, index) => ({
   index,
   x: hashUnit(`star-x-${index}`),
@@ -191,6 +198,98 @@ function drawPhaseDisc(
   context.arc(x, y, radius, 0, TAU);
   context.stroke();
   context.restore();
+}
+
+const moonTextureCache = new Map<string, SurfaceCanvas>();
+
+function moonTextureKey(
+  radius: number,
+  moon: HorizonSnapshot['moon'],
+  sunBearingRadians: number,
+) {
+  const quantize = (value: number, step: number) => Math.round(value / step) * step;
+  return [
+    Math.ceil(radius * 4),
+    quantize(moon.subObserverLatitudeDegrees, 0.25),
+    quantize(moon.subObserverLongitudeDegrees, 0.25),
+    quantize(moon.northPoleBearingRadians, Math.PI / 360),
+    quantize(sunBearingRadians, Math.PI / 360),
+    quantize(moon.solarPhaseAngleDegrees, 0.5),
+  ].join(':');
+}
+
+function renderMoonTexture(
+  radius: number,
+  moon: HorizonSnapshot['moon'],
+  sunBearingRadians: number,
+): SurfaceCanvas {
+  const cacheKey = moonTextureKey(radius, moon, sunBearingRadians);
+  const cached = moonTextureCache.get(cacheKey);
+  if (cached) return cached;
+  const size = Math.max(24, Math.ceil(radius * 4));
+  const surface: SurfaceCanvas = typeof OffscreenCanvas !== 'undefined'
+    ? new OffscreenCanvas(size, size)
+    : Object.assign(document.createElement('canvas'), { width: size, height: size });
+  const surfaceContext = surface.getContext('2d');
+  if (!surfaceContext) return surface;
+  const image = surfaceContext.createImageData(size, size);
+  const half = size / 2;
+  const geometry = lunarSurfaceGeometry(
+    moon.subObserverLatitudeDegrees,
+    moon.subObserverLongitudeDegrees,
+    moon.northPoleBearingRadians,
+    sunBearingRadians,
+    moon.solarPhaseAngleDegrees,
+  );
+  const earthshine = 0.014 + (1 - moon.illuminatedFraction) * 0.026;
+
+  for (let pixelY = 0; pixelY < size; pixelY += 1) {
+    const normalY = (half - pixelY - 0.5) / half;
+    for (let pixelX = 0; pixelX < size; pixelX += 1) {
+      const normalX = (pixelX + 0.5 - half) / half;
+      const radiusSquared = normalX ** 2 + normalY ** 2;
+      if (radiusSquared >= 1) continue;
+      const normalInView = { x: normalX, y: normalY, z: Math.sqrt(1 - radiusSquared) };
+      const normalInBody = visibleLunarNormalToBody(normalInView, geometry);
+      const latitude = Math.asin(clamp(normalInBody.z, -1, 1));
+      const longitude = Math.atan2(normalInBody.y, normalInBody.x);
+      const albedo = sampleLunarAlbedo(longitude, latitude);
+      const reflectance = lunarReflectance(normalInView, geometry.lightInView, earthshine);
+      const index = (pixelY * size + pixelX) * 4;
+      const channelResponse = [1.025, 1, 0.955] as const;
+      for (let channel = 0; channel < 3; channel += 1) {
+        const albedoSrgb = clamp(albedo * channelResponse[channel], 0, 1);
+        image.data[index + channel] = Math.round(
+          clamp((albedoSrgb ** 2.2 * reflectance) ** (1 / 2.2) * 255, 0, 255),
+        );
+      }
+      image.data[index + 3] = Math.round(clamp((1 - radiusSquared) * size * 0.55, 0, 1) * 255);
+    }
+  }
+  surfaceContext.putImageData(image, 0, 0);
+  moonTextureCache.set(cacheKey, surface);
+  if (moonTextureCache.size > 64) {
+    const oldest = moonTextureCache.keys().next().value;
+    if (oldest) moonTextureCache.delete(oldest);
+  }
+  return surface;
+}
+
+function drawMoonSphere(
+  context: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  moon: HorizonSnapshot['moon'],
+  sunBearingRadians: number,
+) {
+  const texture = renderMoonTexture(radius, moon, sunBearingRadians);
+  context.drawImage(texture, x - radius, y - radius, radius * 2, radius * 2);
+  context.strokeStyle = 'rgba(225, 231, 236, .32)';
+  context.lineWidth = 0.7;
+  context.beginPath();
+  context.arc(x, y, radius, 0, TAU);
+  context.stroke();
 }
 
 function apparentPosition(position: HorizontalPosition, elapsedSeconds: number): HorizontalPosition {
@@ -413,15 +512,18 @@ function drawHorizonScene(frame: CanvasFrame) {
     animatedSun.azimuthDegrees,
     animatedSun.altitudeDegrees,
   );
-  const canonicalBrightSide = horizon.moon.phaseAngleDegrees <= 180 ? 0 : Math.PI;
-  drawPhaseDisc(
+  const moonRadius = clamp(
+    9 * horizon.moon.angularDiameterDegrees / 0.518,
+    8.2,
+    10.2,
+  );
+  drawMoonSphere(
     context,
     moon.x,
     moon.y,
-    9,
-    '#dce4eb',
-    horizon.moon.phaseAngleDegrees,
-    sunBearingFromMoon - Math.PI / 2 - canonicalBrightSide,
+    moonRadius,
+    horizon.moon,
+    sunBearingFromMoon,
   );
 
   const core = skyPoint(width, height, animatedCore);
@@ -544,7 +646,6 @@ function solarOrbitPaths(
 }
 
 type PlanetState = SolarSystemSnapshot['planets'][number];
-type SurfaceCanvas = HTMLCanvasElement | OffscreenCanvas;
 type RGB = readonly [number, number, number];
 
 interface PlanetViewFrame {

@@ -35,7 +35,8 @@
     "preview": "vite preview",
     "apple:test": "cd apple && swift build && swift run CosmicCalendarCoreVerifier",
     "ephemeris:update": "node scripts/updateSatelliteEphemeris.mjs",
-    "stars:update": "node scripts/updateBrightStarCatalog.mjs"
+    "stars:update": "node scripts/updateBrightStarCatalog.mjs",
+    "moon:update": "python3 scripts/updateMoonAlbedo.py"
   },
   "dependencies": {
     "astronomy-engine": "2.1.19",

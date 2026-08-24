@@ -27,6 +27,16 @@ The implementation is cross-checked against [JPL Horizons](https://ssd.jpl.nasa.
 
 Astronomy Engine intentionally trades the weight of full JPL kernels for compact client code; its author documents errors up to about 0.4 arcminute for some optimized planetary calculations. Precision is suitable for unaided-sky orientation, not spacecraft navigation or occultation timing.
 
+### Lunar disc
+
+- The observed Moon-to-site and Moon-to-Sun vectors are calculated topocentrically. Their dot product gives the physical solar phase angle and illuminated fraction; apparent diameter uses topocentric range rather than a geocentric constant.
+- The lunar north pole and prime meridian use Astronomy Engine's IAU rotation model. The standard IAU `α₀, δ₀, W` rotation sequence maps every visible pixel into selenographic longitude/latitude, while the projected pole fixes north against the local horizon. This makes optical/physical libration visible instead of rotating a static glyph.
+- Surface brightness samples a reproducible 128×64 luminance reduction of NASA SVS's [LRO/WAC CGI Moon Kit color mosaic](https://svs.gsfc.nasa.gov/4720/). Source and generated SHA-256 hashes are pinned in `src/data/moon-albedo.json`; `npm run moon:update` rebuilds the 8 KiB map.
+- The terminator uses a 92/8 Lommel–Seeliger/Lambert mixture. Lommel–Seeliger single scattering is appropriate for dark particulate regolith and avoids the exaggerated limb darkening of a Lambert sphere; the [USGS ISIS photometry documentation](https://isis.astrogeology.usgs.gov/Isis2/html/photomet.html) identifies it as the lunar scattering model.
+- This is global albedo at overview resolution. It does not include local LOLA elevation, cast crater shadows, atmospheric seeing, terrain occultation, or a weather-dependent sky point-spread function.
+
+The committed Madison fixture at `2026-08-07T17:00:00Z` uses Horizons target 301 quantities 4, 10, 13, 14, 17, and 32. Against the high-precision `MOON_ME` frame, the compact result differs by approximately 0.003° in sub-observer longitude, 0.002° in latitude, 0.001 percentage point in illuminated fraction, and 0.13 arcsecond in apparent diameter.
+
 ### Naked-eye star field
 
 - The terrestrial sky uses all 9,096 stellar records with coordinates in the [Bright Star Catalogue, Fifth Revised Edition (V/50)](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50), rather than a randomized background. The catalog is pinned as a 160 KB binary with source and artifact hashes in `src/data/bright-stars.json`; `npm run stars:update` reproduces it from CDS.
@@ -37,8 +47,10 @@ Astronomy Engine intentionally trades the weight of full JPL kernels for compact
 ## Apollo 11 lunar horizon
 
 - Tranquility Base uses the LRO-derived landing coordinates **0.67409° N, 23.47298° E** published by the [NASA Apollo 11 Lunar Surface Journal](https://history.nasa.gov/wp-content/uploads/static/history/alsj/a11/a11ov.html).
-- Astronomy Engine supplies time-dependent lunar optical libration and Earth–Moon center distance.
-- The sub-Earth selenographic point is converted to altitude/azimuth with spherical local-horizon geometry. Earth angular diameter uses `2 atan(R_Earth / distance)`.
+- The lunar site's IAU body-fixed normal is added to the integrated Earth–Moon center vector. The resulting site-to-Earth vector is converted to altitude/azimuth with spherical local-horizon geometry; its topocentric range determines angular diameter.
+- Earth illumination is calculated at Earth from its Sun and lunar-site vectors, rather than assuming it is exactly complementary to the Moon seen from an unrelated terrestrial observer.
+
+The `2026-08-23T00:00:00Z` fixture uses Horizons target 399 from Apollo 11 coordinates on body 301. JPL returns azimuth 283.106874°, elevation 66.226714°, 23.96300% illumination, and 6532.976 arcseconds apparent diameter; the compact model is checked directly against all four quantities.
 
 Local lunar topography is not included, so “horizon” means the reference-sphere tangent plane at the landing coordinates.
 
@@ -48,7 +60,7 @@ Local lunar topography is not included, so “horizon” means the reference-sph
 
 - Heliocentric positions are supplied by Astronomy Engine's VSOP-based compact model. For high-precision or out-of-range work, use [JPL Horizons](https://ssd-api.jpl.nasa.gov/doc/horizons.html); JPL explicitly separates lower-accuracy fitted [approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html) from its numerical ephemerides.
 - Planet markers use those integrated ephemeris positions. Their orbit guides use JPL's 3000 BCE–3000 CE fitted J2000 Keplerian elements, including eccentricity, inclination, node, and perihelion; the guides are contextual curves rather than a second position solver.
-- Prime-meridian rotation and pole orientation use the IAU Working Group on Cartographic Coordinates and Rotational Elements 2015 formulas embedded by Astronomy Engine. The full north-pole/prime-meridian/east basis is transformed into the same J2000 ecliptic camera frame as the orbit scene.
+- Prime-meridian rotation and pole orientation use the IAU Working Group on Cartographic Coordinates and Rotational Elements formulas embedded by Astronomy Engine. The standard `R₃(W) R₁(90°−δ₀) R₃(90°+α₀)` ordering constructs the full north-pole/prime-meridian/east basis before it is transformed into the same J2000 ecliptic camera frame as the orbit scene.
 - Planet discs are cached supersampled spheres. Each pixel maps through that body-fixed basis to latitude/longitude, applies recognizable procedural albedo regions (bands, storms, caps, clouds, continents), then uses a curved Lambertian terminator, limb response, and restrained material-specific specular term. These are physically lit procedural approximations, not cartographic image products.
 - Saturn's rings use the IAU pole projected into the camera to derive opening angle and position angle; far and near ring halves render on opposite sides of the planet disc for correct occlusion. Ring widths and local body sizes remain exaggerated for overview legibility.
 - Live surface rotation advances from that prime-meridian sample at each body's signed sidereal period. No decorative orbital or Galactic speed-up is applied: motions that are not perceptible in real time remain still, rather than being shown at an unlabeled fictional rate.

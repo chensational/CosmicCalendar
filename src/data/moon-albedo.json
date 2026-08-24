@@ -1,0 +1,12 @@
+{
+  "source": "https://svs.gsfc.nasa.gov/4720/",
+  "sourceAsset": "https://svs.gsfc.nasa.gov/vis/a000000/a004700/a004720/lroc_color_2k.jpg",
+  "sourceSha256": "f7130a1822681fa7512d7dcfd40db8c10b9ba4f06777910348698260ed7a2170",
+  "projection": "equirectangular, centered on 0 degrees longitude, north up",
+  "encoding": "8-bit perceptual luminance, row-major, base64 embedded",
+  "width": 128,
+  "height": 64,
+  "byteLength": 8192,
+  "albedoSha256": "bfb5b8d72236e504caa512b4c3309fd6dc98fb11cb1efd3fbf0eb7e69ae88fd9",
+  "credit": "NASA Scientific Visualization Studio; LRO Camera WAC mosaic"
+}

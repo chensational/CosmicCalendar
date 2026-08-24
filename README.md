@@ -11,8 +11,8 @@
 
 ## What is here
 
-- **Local horizon:** the real-time Sun, Moon, Galactic core, sampled Milky Way plane, and all 9,096 Bright Star Catalogue entries projected for a device or manually entered location, including proper motion, precession, refraction, extinction, B−V color, and altitude-sensitive scintillation.
-- **Tranquility Base:** Earth positioned above the Apollo 11 landing-site horizon using lunar libration.
+- **Local horizon:** the real-time Sun, libration-oriented LRO lunar surface, Galactic core, sampled Milky Way plane, and all 9,096 Bright Star Catalogue entries projected for a device or manually entered location, including proper motion, precession, refraction, extinction, B−V color, and altitude-sensitive scintillation.
+- **Tranquility Base:** Earth positioned and phased above the Apollo 11 landing-site horizon using the topocentric lunar body frame.
 - **Solar System:** all planets and 20 major satellites, cached spherical Lambertian surfaces, IAU pole/prime-meridian rotation, physically projected Saturn rings, eclipse state, and Mercury perihelion precession.
 - **Galactic scale:** the Sun at the measured Galactic radius and height, with a modeled orbit/vertical-oscillation trail from Solar birth.
 - **Cosmic scale:** a Laniākea velocity-flow visualization with a logarithmic timeline from inflation to an explicitly hypothetical heat-death horizon.
@@ -82,7 +82,7 @@ npm run build           # demo + ESM/CJS library bundles
 npm run apple:test      # C/Swift build + standalone native verifier
 ```
 
-The committed JPL fixture checks the Sun from Madison, Wisconsin at `2026-08-23T00:00:00Z`; web and native calculations agree with JPL Horizons DE441 within the documented refraction tolerance. Satellite seed states can be refreshed with `npm run ephemeris:update`; the pinned CDS Bright Star Catalogue can be reproduced with `npm run stars:update`.
+Committed JPL fixtures check the Sun, the topocentric lunar disc from Madison, and Earth from Tranquility Base. Web and native calculations agree with JPL Horizons within the documented compact-model/refraction tolerances. Satellite seed states can be refreshed with `npm run ephemeris:update`; `npm run stars:update` reproduces the pinned CDS catalog and `npm run moon:update` rebuilds the embedded NASA LRO albedo map.
 
 ## Scientific scope
 
@@ -100,9 +100,9 @@ See [Scientific method and source ledger](docs/SCIENTIFIC_METHOD.md) for constan
 
 - Canvas rendering starts from a 2× device-pixel-ratio cap, then adapts resolution, frame rate, and faint-star effects when measured main-thread or deferred raster work is too expensive.
 - `ResizeObserver` and `IntersectionObserver` pause work offscreen.
-- No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The demo loads one same-origin static star-catalog binary.
+- No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The 8 KiB lunar albedo map is embedded; the demo loads one same-origin static star-catalog binary.
 - Browser coordinates remain in local storage. Apple coordinates remain in the signed app group's `UserDefaults`.
-- Production React library (including exported CosmicWatermark): approximately **63.0 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
+- Production React library (including exported CosmicWatermark): approximately **73.1 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
 
 More detail: [Performance architecture](docs/PERFORMANCE.md).
 
@@ -112,7 +112,7 @@ More detail: [Performance architecture](docs/PERFORMANCE.md).
 src/core/                 astronomy, satellite, time, calendar, distance models
 src/components/           React UI and high-performance canvas renderer
 src/CosmicWatermark/      copied Apollo CosmicWatermark components
-src/data/                 pinned JPL states and quantized Bright Star Catalogue
+src/data/                 pinned JPL states, quantized star catalog, and LRO lunar albedo
 apple/                    native C/Swift core, apps, widgets, Xcode project
 docs/                     methods, Apple setup, validation, requirements ledger
 scripts/                  reproducible ephemeris data update

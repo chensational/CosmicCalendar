@@ -1,8 +1,22 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { PLANETS } from '../src/core/constants';
+import {
+  MOON_ALBEDO_BASE64,
+  MOON_ALBEDO_HEIGHT,
+  MOON_ALBEDO_WIDTH,
+} from '../src/data/moon-albedo-embedded';
+import moonAlbedoManifest from '../src/data/moon-albedo.json';
 import { greatCircleBearingRadians, shortestAngularDifference, smoothstep } from '../src/core/math';
+import {
+  lunarReflectance,
+  lunarSurfaceGeometry,
+  sampleLunarAlbedo,
+  visibleLunarNormalToBody,
+} from '../src/core/lunarSurface';
 import { eclipticSphericalToCartesian, orbitalPositionAtTrueAnomaly } from '../src/core/orbits';
 import {
+  bodyFixedEquatorialBasis,
   lambertianLight,
   rotateEquatorialBasis,
   SOLAR_VIEW_BASIS,
@@ -70,8 +84,56 @@ describe('physically coherent animation geometry', () => {
     expect(coordinates.longitudeRadians).toBeCloseTo(0, 12);
   });
 
+  it('applies the IAU prime-meridian rotation sequence in the correct order', () => {
+    const basis = bodyFixedEquatorialBasis(0, 90, 0);
+    expect(basis.north.z).toBeCloseTo(1, 12);
+    expect(basis.meridian.y).toBeCloseTo(1, 12);
+    expect(basis.east.x).toBeCloseTo(-1, 12);
+  });
+
   it('keeps the nightside dark under Lambertian illumination', () => {
     expect(lambertianLight({ x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: 1 })).toBeCloseTo(1, 12);
     expect(lambertianLight({ x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 })).toBeCloseTo(0.025, 12);
+  });
+
+  it('builds an orthonormal libration-aware lunar viewing basis', () => {
+    const geometry = lunarSurfaceGeometry(6.4, -5.2, Math.PI / 5, Math.PI / 2, 90);
+    const basis = [geometry.viewCenterBody, geometry.screenRightBody, geometry.screenUpBody];
+    for (const vector of basis) {
+      expect(Math.hypot(vector.x, vector.y, vector.z)).toBeCloseTo(1, 12);
+    }
+    expect(
+      geometry.viewCenterBody.x * geometry.screenRightBody.x +
+      geometry.viewCenterBody.y * geometry.screenRightBody.y +
+      geometry.viewCenterBody.z * geometry.screenRightBody.z,
+    ).toBeCloseTo(0, 12);
+    expect(geometry.lightInView.x).toBeCloseTo(1, 12);
+    expect(geometry.lightInView.z).toBeCloseTo(0, 12);
+    const discCenter = visibleLunarNormalToBody({ x: 0, y: 0, z: 1 }, geometry);
+    expect(discCenter.x).toBeCloseTo(geometry.viewCenterBody.x, 12);
+    expect(discCenter.y).toBeCloseTo(geometry.viewCenterBody.y, 12);
+    expect(discCenter.z).toBeCloseTo(geometry.viewCenterBody.z, 12);
+  });
+
+  it('uses real LRO albedo contrast for lunar maria and ray craters', () => {
+    const tranquility = sampleLunarAlbedo(31.4 * Math.PI / 180, 8.5 * Math.PI / 180);
+    const tycho = sampleLunarAlbedo(-11.2 * Math.PI / 180, -43.3 * Math.PI / 180);
+    expect(tranquility).toBeLessThan(0.55);
+    expect(tycho).toBeGreaterThan(0.8);
+    expect(tycho - tranquility).toBeGreaterThan(0.3);
+  });
+
+  it('matches the pinned LRO-derived lunar albedo artifact', () => {
+    const albedo = Buffer.from(MOON_ALBEDO_BASE64, 'base64');
+    expect(albedo).toHaveLength(MOON_ALBEDO_WIDTH * MOON_ALBEDO_HEIGHT);
+    expect(albedo).toHaveLength(moonAlbedoManifest.byteLength);
+    expect(createHash('sha256').update(albedo).digest('hex')).toBe(moonAlbedoManifest.albedoSha256);
+  });
+
+  it('uses lunar-regolith scattering instead of Lambertian limb darkening', () => {
+    const limbNormal = { x: Math.sqrt(0.96), y: 0, z: 0.2 };
+    const fullMoonLight = { x: 0, y: 0, z: 1 };
+    expect(lunarReflectance(limbNormal, fullMoonLight)).toBeGreaterThan(0.85);
+    expect(lunarReflectance({ x: 0, y: 0, z: 1 }, { x: 0, y: 0, z: -1 })).toBeCloseTo(0.018, 12);
   });
 });
