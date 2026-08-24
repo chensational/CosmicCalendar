@@ -9,18 +9,18 @@ import {
 
 describe('wheel scale interaction', () => {
   it('keeps precise trackpad movement proportional', () => {
-    expect(wheelDeltaToScaleStep(2)).toBeCloseTo(0.001);
-    expect(wheelDeltaToScaleStep(-2)).toBeCloseTo(-0.001);
+    expect(wheelDeltaToScaleStep(2)).toBeCloseTo(0.0005);
+    expect(wheelDeltaToScaleStep(-2)).toBeCloseTo(-0.0005);
   });
 
   it('caps large wheel events so one event cannot jump scales', () => {
-    expect(wheelDeltaToScaleStep(100)).toBe(0.04);
-    expect(wheelDeltaToScaleStep(-100)).toBe(-0.04);
+    expect(wheelDeltaToScaleStep(100)).toBe(0.02);
+    expect(wheelDeltaToScaleStep(-100)).toBe(-0.02);
   });
 
   it('normalizes line and page delta modes', () => {
-    expect(wheelDeltaToScaleStep(1, 1)).toBeCloseTo(0.008);
-    expect(wheelDeltaToScaleStep(1, 2, 600)).toBe(0.04);
+    expect(wheelDeltaToScaleStep(1, 1)).toBeCloseTo(0.004);
+    expect(wheelDeltaToScaleStep(1, 2, 600)).toBe(0.02);
   });
 
   it('ignores invalid input', () => {

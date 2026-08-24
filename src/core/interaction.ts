@@ -1,8 +1,8 @@
 import { clamp } from './math';
 
 const PIXELS_PER_LINE = 16;
-const WHEEL_SENSITIVITY = 0.0005;
-const MAX_SCALE_STEP = 0.04;
+const WHEEL_SENSITIVITY = 0.00025;
+const MAX_SCALE_STEP = 0.02;
 
 /** Converts wheel input to a bounded scale change without amplifying trackpad events. */
 export function wheelDeltaToScaleStep(
