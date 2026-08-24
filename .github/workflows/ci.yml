@@ -27,7 +27,7 @@ jobs:
       - run: npm run apple:test
 
   apple-ui:
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
       - name: Build every Apple app and widget without signing

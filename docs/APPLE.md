@@ -4,7 +4,7 @@ Cosmic Calendar provides native SwiftUI/WidgetKit code for all WidgetKit-capable
 
 ## Requirements
 
-- Xcode 16 or newer with the iOS, macOS, watchOS, and visionOS SDKs you intend to build.
+- Xcode 26 or newer for the native visionOS 26 widget target. Xcode 16 can still build the iOS/iPadOS, macOS, watchOS, and pre-widget visionOS app surfaces.
 - An Apple Developer team for device installation and App Group entitlements.
 - Bundle/App Group identifiers available to that team.
 
