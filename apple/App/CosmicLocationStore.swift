@@ -23,16 +23,24 @@ final class CosmicLocationStore: NSObject, ObservableObject, CLLocationManagerDe
         manager.desiredAccuracy = kCLLocationAccuracyKilometer
     }
 
+    nonisolated private static func isAuthorized(_ status: CLAuthorizationStatus) -> Bool {
+        #if os(macOS)
+        return status == .authorizedAlways
+        #else
+        return status == .authorizedAlways || status == .authorizedWhenInUse
+        #endif
+    }
+
     func requestLocation() {
         errorMessage = nil
-        switch manager.authorizationStatus {
-        case .notDetermined:
+        let status = manager.authorizationStatus
+        if status == .notDetermined {
             manager.requestWhenInUseAuthorization()
-        case .authorizedAlways, .authorizedWhenInUse:
+        } else if Self.isAuthorized(status) {
             manager.requestLocation()
-        case .denied, .restricted:
+        } else if status == .denied || status == .restricted {
             errorMessage = "Location access is off. Enable it in Settings or keep the saved location."
-        @unknown default:
+        } else {
             errorMessage = "Location status is unavailable."
         }
     }
@@ -42,7 +50,7 @@ final class CosmicLocationStore: NSObject, ObservableObject, CLLocationManagerDe
         Task { @MainActor [weak self] in
             guard let self else { return }
             authorization = status
-            if status == .authorizedAlways || status == .authorizedWhenInUse {
+            if Self.isAuthorized(status) {
                 self.manager.requestLocation()
             }
         }
