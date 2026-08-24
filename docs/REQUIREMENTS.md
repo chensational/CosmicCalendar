@@ -5,7 +5,7 @@ This ledger prevents completion from being inferred from a build alone.
 | Goal requirement | Implementation evidence | Verification evidence | Status |
 | --- | --- | --- | --- |
 | Copy CosmicWatermark components into a folder in the current workspace | `../CosmicWatermark/` and `src/CosmicWatermark/` | Source checksums/provenance audit | Implemented |
-| Public `chensational/CosmicCalendar` repository | Local Git repository and GitHub workflows | Public GitHub URL and visibility query | Pending publication |
+| Public `chensational/CosmicCalendar` repository | [Public GitHub repository](https://github.com/chensational/CosmicCalendar) and workflows | GitHub visibility `PUBLIC`; main pushed | Verified |
 | User location integration | `useObserverLocation`, `CosmicLocationStore` | Manual/device paths, local-only persistence | Implemented |
 | Sun, Moon, and Milky Way relative to local horizon | `getHorizonSnapshot`, horizon canvas | JPL Sun fixture + 49 Galactic-plane samples | Verified |
 | Earth over Apollo 11 horizon | `getLunarHorizonSnapshot`, lunar inset | Lunar distance/angular-size/altitude tests | Verified reference-sphere model |
@@ -21,6 +21,6 @@ This ledger prevents completion from being inferred from a build alone.
 | Boundary fast-forward/rewind to heat death/inflation | boundary wheel logic + logarithmic epoch control | Timeline unit tests | Verified |
 | Five dynamic distance statistics | `getDistanceMetrics` + expandable live console | WGS84 latitude tests and methods ledger | Verified as current-rate-equivalent models |
 | Parenthetical CMB-relative totals | same metrics with `cmbFrameDistanceKm` | hierarchy verifier in JS/Swift | Verified as labeled scalar hierarchy models |
-| Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; CI Xcode build | Awaiting published CI for full UI build |
+| Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; [unsigned full Xcode macOS app/widget build](https://github.com/chensational/CosmicCalendar/actions/runs/32682813440) | Verified |
 | Performant React component | ESM/CJS package, one bounded Canvas loop | production bundle sizes and build | Verified |
 | Performance efficiency | DPR cap, offscreen pause, reduced motion, offline data | architecture audit | Verified |

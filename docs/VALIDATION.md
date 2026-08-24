@@ -23,8 +23,9 @@ cd apple && xcodegen generate --spec project.yml
 - ESM/CJS library and static demo production builds.
 - C/Swift native build and eight-check verifier.
 
-## Checks requiring external infrastructure
+## External-infrastructure checks
 
-- Apple app/widget UI targets require a full Xcode installation and platform SDKs. GitHub Actions runs an unsigned macOS build after publication.
+- The published [CI run](https://github.com/chensational/CosmicCalendar/actions/runs/32682813440) passed the web build/tests, C/Swift verifier, and a full unsigned Xcode build of the macOS app plus WidgetKit extension.
+- GitHub Pages deployed successfully and the [live demo](https://chensational.github.io/CosmicCalendar/) returns HTTPS 200.
 - Device signing, App Group registration, and installation require the repository owner's Apple Developer team.
 - Browser geolocation behavior requires an HTTPS origin (or localhost) and an explicit user grant.

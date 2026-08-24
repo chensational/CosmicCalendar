@@ -1,8 +1,13 @@
 # Cosmic Calendar
 
+[![CI](https://github.com/chensational/CosmicCalendar/actions/workflows/ci.yml/badge.svg)](https://github.com/chensational/CosmicCalendar/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-live-69d2c9)](https://chensational.github.io/CosmicCalendar/)
+
 **This moment has coordinates.** Cosmic Calendar is a location-aware observatory and calendar that moves smoothly from your horizon to the Solar System, the Milky Way, and the Laniākea flow field. It is delivered as both a reusable React component and native WidgetKit surfaces for every Apple platform that supports widgets.
 
 ![Cosmic Calendar Earth and Moon scale](docs/cosmic-calendar.png)
+
+**[Open the live observatory →](https://chensational.github.io/CosmicCalendar/)**
 
 ## What is here
 
