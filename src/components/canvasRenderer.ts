@@ -12,6 +12,7 @@ import type {
   HorizonSnapshot,
   LunarHorizonSnapshot,
   SolarSystemSnapshot,
+  VisibleStar,
 } from '../core/types';
 
 export interface CanvasFrame {
@@ -24,6 +25,7 @@ export interface CanvasFrame {
   horizon: HorizonSnapshot;
   lunar: LunarHorizonSnapshot;
   solar: SolarSystemSnapshot;
+  stars: readonly VisibleStar[];
   cosmicAgeYears: number;
   reducedMotion: boolean;
 }
@@ -204,8 +206,117 @@ function skyPoint(width: number, height: number, position: HorizontalPosition) {
   };
 }
 
+const CATALOG_STAR_COLORS = [
+  '164, 194, 255',
+  '202, 219, 255',
+  '244, 244, 234',
+  '255, 224, 172',
+  '255, 181, 118',
+] as const;
+
+interface CatalogStarPaths {
+  paths: readonly Path2D[];
+  halos: readonly Path2D[];
+  twinkles: readonly {
+    x: number;
+    y: number;
+    radius: number;
+    phase: number;
+    relativeAirMass: number;
+  }[];
+}
+
+const catalogStarPathCache = new WeakMap<readonly VisibleStar[], Map<string, CatalogStarPaths>>();
+
+function catalogColorBucket(colorIndex: number): number {
+  if (colorIndex < -0.1) return 0;
+  if (colorIndex < 0.35) return 1;
+  if (colorIndex < 0.8) return 2;
+  if (colorIndex < 1.3) return 3;
+  return 4;
+}
+
+function buildCatalogStarPaths(
+  stars: readonly VisibleStar[],
+  width: number,
+  height: number,
+): CatalogStarPaths {
+  let sizeCache = catalogStarPathCache.get(stars);
+  if (!sizeCache) {
+    sizeCache = new Map();
+    catalogStarPathCache.set(stars, sizeCache);
+  }
+  const sizeKey = `${Math.round(width)}:${Math.round(height)}`;
+  const cached = sizeCache.get(sizeKey);
+  if (cached) return cached;
+
+  const paths = Array.from({ length: CATALOG_STAR_COLORS.length * 5 }, () => new Path2D());
+  const halos = Array.from({ length: CATALOG_STAR_COLORS.length }, () => new Path2D());
+  const twinkles: CatalogStarPaths['twinkles'][number][] = [];
+  for (const star of stars) {
+    const x = star.azimuthDegrees / 360 * width;
+    const y = height * 0.72 - star.altitudeDegrees / 90 * height * 0.62;
+    const colorBucket = catalogColorBucket(star.colorIndex);
+    const brightnessBucket = clamp(Math.floor((6.6 - star.apparentMagnitude) / 1.4), 0, 4);
+    const radius = clamp(0.28 + (6.6 - star.apparentMagnitude) * 0.12, 0.28, 1.38);
+    const path = paths[colorBucket * 5 + brightnessBucket];
+    path.moveTo(x + radius, y);
+    path.arc(x, y, radius, 0, TAU);
+    if (star.apparentMagnitude < 1.5) {
+      halos[colorBucket].moveTo(x + radius * 2.8, y);
+      halos[colorBucket].arc(x, y, radius * 2.8, 0, TAU);
+    }
+    if (star.apparentMagnitude < 2.7) {
+      twinkles.push({
+        x,
+        y,
+        radius,
+        phase: hashUnit(`catalog-star-${star.hr}`) * TAU,
+        relativeAirMass: star.relativeAirMass,
+      });
+    }
+  }
+  const result = { paths, halos, twinkles };
+  sizeCache.set(sizeKey, result);
+  return result;
+}
+
+function drawCatalogStars(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  elapsedSeconds: number,
+  stars: readonly VisibleStar[],
+  reducedMotion: boolean,
+) {
+  const catalogPaths = buildCatalogStarPaths(stars, width, height);
+  context.save();
+  catalogPaths.halos.forEach((path, colorBucket) => {
+    context.fillStyle = `rgba(${CATALOG_STAR_COLORS[colorBucket]}, .075)`;
+    context.fill(path);
+  });
+  catalogPaths.paths.forEach((path, index) => {
+    const colorBucket = Math.floor(index / 5);
+    const brightnessBucket = index % 5;
+    context.fillStyle = `rgba(${CATALOG_STAR_COLORS[colorBucket]}, ${0.35 + brightnessBucket * 0.12})`;
+    context.fill(path);
+  });
+  if (!reducedMotion) {
+    for (const star of catalogPaths.twinkles) {
+      const airMassResponse = clamp((star.relativeAirMass - 1) / 8, 0, 1);
+      const pulse = (0.035 + airMassResponse * 0.1) *
+        (0.5 + 0.5 * Math.sin(elapsedSeconds * (1.4 + airMassResponse * 2.2) + star.phase));
+      context.fillStyle = `rgba(245, 249, 255, ${pulse})`;
+      context.beginPath();
+      context.arc(star.x, star.y, star.radius * 1.15, 0, TAU);
+      context.fill();
+    }
+  }
+  context.restore();
+}
+
 function drawHorizonScene(frame: CanvasFrame) {
-  const { context, width, height, horizon, lunar, elapsedSeconds, realtimeOffsetSeconds, cosmicAgeYears } = frame;
+  const { context, width, height, horizon, lunar, stars, elapsedSeconds, realtimeOffsetSeconds, cosmicAgeYears } = frame;
   const earthFormationAge = 13.8e9 - 4.54e9;
   const redGiantProgress = clamp((cosmicAgeYears - (13.8e9 + 4.5e9)) / 8e8, 0, 1);
   const postEarthProgress = clamp((cosmicAgeYears - (13.8e9 + 7.5e9)) / 1e9, 0, 1);
@@ -236,7 +347,11 @@ function drawHorizonScene(frame: CanvasFrame) {
   context.fillRect(0, 0, width, height * 0.76);
   context.save();
   context.globalAlpha = 1 - smoothstep(-16, -2, sunHeight);
-  drawStars(context, width, height * 0.74, elapsedSeconds, frame.reducedMotion ? 0 : 0.12);
+  if (stars.length) {
+    drawCatalogStars(context, width, height, elapsedSeconds, stars, frame.reducedMotion);
+  } else {
+    drawStars(context, width, height * 0.74, elapsedSeconds, frame.reducedMotion ? 0 : 0.12);
+  }
   context.restore();
 
   context.save();

@@ -25,7 +25,8 @@ export function useObserverLocation(initial?: Partial<ObserverLocation>) {
       });
     }
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      if (typeof window === 'undefined') return DEFAULT_LOCATION;
+      const stored = window.localStorage.getItem(STORAGE_KEY);
       return stored ? sanitizeLocation(JSON.parse(stored) as ObserverLocation) : DEFAULT_LOCATION;
     } catch {
       return DEFAULT_LOCATION;
@@ -45,7 +46,8 @@ export function useObserverLocation(initial?: Partial<ObserverLocation>) {
     const safe = sanitizeLocation(next);
     setLocationState(safe);
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
+      if (typeof window === 'undefined') return;
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(safe));
     } catch {
       // Storage is optional; location never leaves the device through this component.
     }

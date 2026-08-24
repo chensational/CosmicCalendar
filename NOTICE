@@ -11,3 +11,8 @@ commit 4133f30f5a4028bb789b1335f1892e02d9e07be5 (2026-07-18).
 
 Pinned planetary-satellite state vectors were generated from the public NASA/JPL
 Horizons API. Data provenance is recorded in src/data/satellite-reference.json.
+
+The stellar catalog asset is derived from the Bright Star Catalogue, Fifth Revised
+Edition (Hoffleit and Warren, 1991), catalog V/50, disseminated by the NASA
+Astronomical Data Center and CDS VizieR. Provenance and checksums are recorded in
+src/data/bright-stars.json.

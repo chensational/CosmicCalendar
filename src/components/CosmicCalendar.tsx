@@ -12,7 +12,9 @@ import { getHorizonSnapshot, getLunarHorizonSnapshot, getSolarSystemSnapshot } f
 import { clamp } from '../core/math';
 import type { CosmicScale, ObserverLocation } from '../core/types';
 import { useObserverLocation } from '../hooks/useObserverLocation';
+import { useBrightStarCatalog } from '../hooks/useBrightStarCatalog';
 import { useReducedMotion } from '../hooks/useReducedMotion';
+import { getVisibleStars } from '../core/stars';
 import { CosmicCanvas } from './CosmicCanvas';
 
 export interface CosmicCalendarProps {
@@ -119,6 +121,7 @@ export function CosmicCalendar({
   const [calendarAnchor, setCalendarAnchor] = useState(() => new Date(selectedDate));
   const [locationOpen, setLocationOpen] = useState(false);
   const reducedMotion = useReducedMotion();
+  const starCatalog = useBrightStarCatalog();
   const { location, setLocation, requestDeviceLocation, error } = useObserverLocation(initialLocation);
 
   useEffect(() => {
@@ -133,6 +136,12 @@ export function CosmicCalendar({
   const horizon = useMemo(() => getHorizonSnapshot(calculationDate, location), [calculationDate, location]);
   const lunar = useMemo(() => getLunarHorizonSnapshot(calculationDate), [calculationDate]);
   const solar = useMemo(() => getSolarSystemSnapshot(calculationDate), [calculationDate]);
+  const stars = useMemo(
+    () => starCatalog && scalePosition < 1.2 && horizon.sun.altitudeDegrees < -1.5
+      ? getVisibleStars(calculationDate, location, starCatalog)
+      : [],
+    [calculationDate, horizon.sun.altitudeDegrees, location, scalePosition, starCatalog],
+  );
   const distanceMetrics = useMemo(() => getDistanceMetrics(location.latitude, calculationDate), [calculationDate, location.latitude]);
   const calendarDays = useMemo(() => buildCalendarMonth(calendarAnchor), [calendarAnchor]);
   const cosmicAgeYears = interpolateCosmicAge(cosmicTimePosition);
@@ -215,6 +224,7 @@ export function CosmicCalendar({
             horizon={horizon}
             lunar={lunar}
             solar={solar}
+            stars={stars}
             scalePosition={scalePosition}
             cosmicAgeYears={cosmicAgeYears}
             live={live}

@@ -8,6 +8,7 @@ This ledger prevents completion from being inferred from a build alone.
 | Public `chensational/CosmicCalendar` repository | [Public GitHub repository](https://github.com/chensational/CosmicCalendar) and workflows | GitHub visibility `PUBLIC`; main pushed | Verified |
 | User location integration | `useObserverLocation`, `CosmicLocationStore` | Manual/device paths, local-only persistence | Implemented |
 | Sun, Moon, and Milky Way relative to local horizon | `getHorizonSnapshot`, horizon canvas | JPL Sun fixture + 49 Galactic-plane samples | Verified |
+| Realistic terrestrial stars | 9,096-record BSC5 binary, proper-motion/precession projection, extinction/color/scintillation renderer | Catalog checksum/count, Sirius coordinate comparison, hemisphere/extinction tests, Chromium visual audit | Verified within clear-sky model limits |
 | Earth over Apollo 11 horizon | `getLunarHorizonSnapshot`, lunar inset | Lunar distance/angular-size/altitude tests | Verified reference-sphere model |
 | All planets relative to Sun | `getSolarSystemSnapshot`, Solar scene | Nine-body presence and build tests | Verified in bounded ephemeris |
 | Major satellites, changing and sunlit | 20-body catalog, integrated/JPL-seeded state propagation, eclipse test, Solar scene dots | Model-count/orbit-scale tests; pinned JPL artifact | Verified with per-model limits |
@@ -23,4 +24,4 @@ This ledger prevents completion from being inferred from a build alone.
 | Parenthetical CMB-relative totals | same metrics with `cmbFrameDistanceKm` | hierarchy verifier in JS/Swift | Verified as labeled scalar hierarchy models |
 | Apple widgets first priority | native C/Swift core, four app and widget pairs | Swift verifier; generated Xcode project; unsigned full-Xcode app/widget builds across macOS, iOS/iPadOS, watchOS, and visionOS | Verified |
 | Performant React component | ESM/CJS package, one bounded Canvas loop | production bundle sizes and build | Verified |
-| Performance efficiency | DPR cap, offscreen pause, reduced motion, offline data | architecture audit | Verified |
+| Performance efficiency | DPR cap, offscreen pause, reduced motion, lazy quantized catalog and cached paths | architecture audit, bundle output, ~2.1 ms catalog projection fixture | Verified |

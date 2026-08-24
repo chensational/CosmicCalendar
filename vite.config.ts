@@ -3,6 +3,9 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   base: './',
+  define: {
+    __COSMIC_CALENDAR_LIBRARY__: 'false',
+  },
   plugins: [react()],
   build: {
     outDir: 'site',

@@ -1,0 +1,11 @@
+{
+  "catalog": "Bright Star Catalogue, Fifth Revised Edition (V/50)",
+  "authors": "Hoffleit and Warren (1991)",
+  "sourceUrl": "https://cdsarc.cds.unistra.fr/ftp/V/50/catalog.gz",
+  "sourceSha256": "3dc44b1e90be8fbe5bcc7656032560f51275f985c7e3f783c9028e1838ec7bed",
+  "binarySha256": "c0cb34bbeff001192ee94f92f93a419306b8c79e7f1e89703ad94a294d9e534a",
+  "epoch": "J2000.0",
+  "count": 9096,
+  "recordSizeBytes": 18,
+  "encoding": "CCSC v1 little-endian"
+}

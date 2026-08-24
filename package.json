@@ -34,7 +34,8 @@
     "build": "npm run typecheck && npm test && npm run build:demo && npm run build:lib",
     "preview": "vite preview",
     "apple:test": "cd apple && swift build && swift run CosmicCalendarCoreVerifier",
-    "ephemeris:update": "node scripts/updateSatelliteEphemeris.mjs"
+    "ephemeris:update": "node scripts/updateSatelliteEphemeris.mjs",
+    "stars:update": "node scripts/updateBrightStarCatalog.mjs"
   },
   "dependencies": {
     "astronomy-engine": "2.1.19",

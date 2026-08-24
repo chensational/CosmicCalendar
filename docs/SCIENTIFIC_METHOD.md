@@ -27,6 +27,13 @@ The implementation is cross-checked against [JPL Horizons](https://ssd.jpl.nasa.
 
 Astronomy Engine intentionally trades the weight of full JPL kernels for compact client code; its author documents errors up to about 0.4 arcminute for some optimized planetary calculations. Precision is suitable for unaided-sky orientation, not spacecraft navigation or occultation timing.
 
+### Naked-eye star field
+
+- The terrestrial sky uses all 9,096 stellar records with coordinates in the [Bright Star Catalogue, Fifth Revised Edition (V/50)](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50), rather than a randomized background. The catalog is pinned as a 160 KB binary with source and artifact hashes in `src/data/bright-stars.json`; `npm run stars:update` reproduces it from CDS.
+- FK5 J2000 right ascension and declination advance by the catalog's projected proper motions. Astronomy Engine rotates the resulting unit vectors through precession/nutation into true equator-of-date before the observer's sidereal rotation projects them onto the local horizon.
+- Standard-atmosphere density at observer elevation scales both refraction and a nominal clear-sky extinction coefficient. Relative optical air mass follows the [Kasten–Young 1989](https://doi.org/10.1364/AO.28.004735) approximation; catalog B−V indices plus differential low-altitude reddening select restrained visible colors.
+- The extinction coefficient is a representative clear-sky value, not a local weather or light-pollution measurement. Clouds, aerosols, aurora, artificial sky glow, and terrain occlusion are not modeled. Star glyph radii are visibility encodings, not angular stellar diameters.
+
 ## Apollo 11 lunar horizon
 
 - Tranquility Base uses the LRO-derived landing coordinates **0.67409° N, 23.47298° E** published by the [NASA Apollo 11 Lunar Surface Journal](https://history.nasa.gov/wp-content/uploads/static/history/alsj/a11/a11ov.html).

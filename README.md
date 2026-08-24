@@ -11,7 +11,7 @@
 
 ## What is here
 
-- **Local horizon:** the real-time altitude and azimuth of the Sun, Moon, Galactic core, and sampled Milky Way plane for a device or manually entered location.
+- **Local horizon:** the real-time Sun, Moon, Galactic core, sampled Milky Way plane, and all 9,096 Bright Star Catalogue entries projected for a device or manually entered location, including proper motion, precession, refraction, extinction, B−V color, and altitude-sensitive scintillation.
 - **Tranquility Base:** Earth positioned above the Apollo 11 landing-site horizon using lunar libration.
 - **Solar System:** all planets and 20 major satellites, physically directed illumination, IAU body rotation, procedural surface features, Saturn's ring tilt, and Mercury perihelion precession.
 - **Galactic scale:** the Sun at the measured Galactic radius and height, with a modeled orbit/vertical-oscillation trail from Solar birth.
@@ -82,13 +82,14 @@ npm run build           # demo + ESM/CJS library bundles
 npm run apple:test      # C/Swift build + standalone native verifier
 ```
 
-The committed JPL fixture checks the Sun from Madison, Wisconsin at `2026-08-23T00:00:00Z`; web and native calculations agree with JPL Horizons DE441 within the documented refraction tolerance. Satellite seed states can be refreshed from JPL with `npm run ephemeris:update`.
+The committed JPL fixture checks the Sun from Madison, Wisconsin at `2026-08-23T00:00:00Z`; web and native calculations agree with JPL Horizons DE441 within the documented refraction tolerance. Satellite seed states can be refreshed with `npm run ephemeris:update`; the pinned CDS Bright Star Catalogue can be reproduced with `npm run stars:update`.
 
 ## Scientific scope
 
 Cosmic Calendar distinguishes **measured state**, **bounded ephemeris**, and **illustrative model**. It never presents an unknowable multi-billion-year path as an exact odometer.
 
 - Modern Sun, Moon, and planet positions use [Astronomy Engine](https://github.com/cosinekitty/astronomy), calibrated against JPL numerical ephemerides. The UI declares a conservative 3000 BCE–3000 CE planetary display bound.
+- Terrestrial stars come from the [CDS Bright Star Catalogue V/50](https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50); a compact pinned binary keeps catalog delivery independent of third-party runtime services.
 - Planetary-satellite reference states come from the [NASA/JPL Horizons API](https://ssd-api.jpl.nasa.gov/doc/horizons.html). The Moon and four Galilean satellites use integrated analytic models; the other 15 use JPL-seeded osculating Kepler propagation, clearly identified in the public data model.
 - Galactic and cosmic history cannot be reconstructed as a unique trajectory. Those views are uncertainty-aware explanatory models, not astrometric ephemerides.
 - “Distance traveled since formation” is not directly observable because rotation, orbits, and reference frames changed. Values therefore use cited formation ages and current-rate-equivalent integrations. Every row exposes its method.
@@ -99,9 +100,9 @@ See [Scientific method and source ledger](docs/SCIENTIFIC_METHOD.md) for constan
 
 - Canvas rendering is capped at 2× device pixel ratio and uses one visible animation loop.
 - `ResizeObserver` and `IntersectionObserver` pause work offscreen.
-- No texture downloads, telemetry, advertising, location API, or application server is required.
+- No texture downloads, third-party runtime calls, telemetry, advertising, or application server is required. The demo loads one same-origin static star-catalog binary.
 - Browser coordinates remain in local storage. Apple coordinates remain in the signed app group's `UserDefaults`.
-- Production React library (including exported CosmicWatermark): approximately **59 KB gzip JavaScript + 3.5 KB gzip CSS** in the current build.
+- Production React library (including exported CosmicWatermark): approximately **61 KB gzip main JavaScript + 3.5 KB gzip CSS**. The **140 KB gzip** star-catalog chunk loads only when the calendar mounts.
 
 More detail: [Performance architecture](docs/PERFORMANCE.md).
 
@@ -111,7 +112,7 @@ More detail: [Performance architecture](docs/PERFORMANCE.md).
 src/core/                 astronomy, satellite, time, calendar, distance models
 src/components/           React UI and high-performance canvas renderer
 src/CosmicWatermark/      copied Apollo CosmicWatermark components
-src/data/                 pinned JPL reference state vectors
+src/data/                 pinned JPL states and quantized Bright Star Catalogue
 apple/                    native C/Swift core, apps, widgets, Xcode project
 docs/                     methods, Apple setup, validation, requirements ledger
 scripts/                  reproducible ephemeris data update

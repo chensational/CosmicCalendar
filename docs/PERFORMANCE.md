@@ -7,19 +7,22 @@
 - `IntersectionObserver` and Page Visibility stop the animation offscreen or in a background tab; `ResizeObserver` updates backing resolution only when necessary.
 - Motion preference is honored. With reduced motion enabled, changes render a static frame instead of maintaining `requestAnimationFrame`.
 - Transition damping is time-based rather than frame-based, so scale motion has the same timing on 24, 30, 60, and 120 Hz displays.
-- Deterministic star paths and Kepler orbit paths are generated once and reused. Space stars remain photometrically stable; only a small atmospheric subset adds restrained scintillation.
+- The 9,096-record Bright Star Catalogue is a 160 KB quantized binary loaded asynchronously. Its full proper-motion/precession/horizon/extinction projection takes about 2.1 ms in the checked Chromium fixture every five seconds; only the resulting visible hemisphere is retained.
+- Catalog star paths and Kepler orbit paths are generated once per state/size and reused. Space stars remain photometrically stable; only bright terrestrial stars receive altitude-sensitive scintillation.
 - Astronomy is memoized by location and a five-second date bucket. Calendar and multi-billion-year distance models recalculate only when their inputs change.
 - A one-minute finite-difference apparent-motion sample lets the renderer extrapolate Sun, Moon, Galactic plane, and lunar-Earth positions smoothly between five-second ephemeris buckets without invoking the astronomy engine per frame.
 - The Solar System uses logarithmic orbit radii so all planets fit without unstable extreme transforms. Satellite offsets are locally exaggerated instead of increasing world-coordinate precision requirements.
-- No texture or ephemeris network request occurs at runtime. The JPL satellite seed is a compact checked-in JSON artifact.
+- No third-party request occurs at runtime. The web demo makes one same-origin static catalog request; JPL satellite seeds and every astronomy model remain checked in.
 
 Current production output:
 
 | Artifact | Raw | Gzip |
 | --- | ---: | ---: |
-| React library JS (ESM, including CosmicWatermark export) | ~183 KB | ~59 KB |
+| React library JS (ESM, including CosmicWatermark export) | ~188.5 KB | ~61 KB |
+| Lazy star-catalog library chunk | ~218.5 KB | ~140 KB |
 | Component CSS | ~13.5 KB | ~3.5 KB |
-| Demo JS | ~290 KB | ~100 KB |
+| Demo JS | ~308 KB | ~108 KB |
+| Demo star-catalog binary | ~164 KB | n/a |
 
 The inherited `CosmicWatermark` loads Three.js dynamically only when that optional decorative component is mounted; the main calendar stays on Canvas 2D because its vector workload remains comfortably bounded without a WebGL scene graph or texture uploads.
 

@@ -16,6 +16,25 @@ export interface HorizontalPosition {
   };
 }
 
+export interface CatalogStar {
+  hr: number;
+  rightAscensionDegrees: number;
+  declinationDegrees: number;
+  visualMagnitude: number;
+  colorIndex?: number;
+  properMotionRaArcsecondsPerYear: number;
+  properMotionDecArcsecondsPerYear: number;
+}
+
+export interface VisibleStar {
+  hr: number;
+  altitudeDegrees: number;
+  azimuthDegrees: number;
+  apparentMagnitude: number;
+  colorIndex: number;
+  relativeAirMass: number;
+}
+
 export interface HorizonSnapshot {
   date: Date;
   observer: ObserverLocation;

@@ -4,6 +4,9 @@ import { resolve } from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    __COSMIC_CALENDAR_LIBRARY__: 'true',
+  },
   build: {
     lib: {
       entry: resolve(import.meta.dirname, 'src/index.ts'),
@@ -12,7 +15,10 @@ export default defineConfig({
       fileName: (format) => format === 'es' ? 'cosmic-calendar.js' : 'cosmic-calendar.cjs',
     },
     rollupOptions: {
-      external: ['react', 'react-dom', 'three'],
+      external: (id) =>
+        id === 'react' || id.startsWith('react/') ||
+        id === 'react-dom' || id.startsWith('react-dom/') ||
+        id === 'three' || id.startsWith('three/'),
       output: {
         globals: {
           react: 'React',
