@@ -26,6 +26,8 @@ final class CosmicLocationStore: NSObject, ObservableObject, CLLocationManagerDe
     nonisolated private static func isAuthorized(_ status: CLAuthorizationStatus) -> Bool {
         #if os(macOS)
         return status == .authorizedAlways
+        #elseif os(visionOS)
+        return status == .authorizedWhenInUse
         #else
         return status == .authorizedAlways || status == .authorizedWhenInUse
         #endif
